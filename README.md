@@ -19,8 +19,6 @@ Mercado is a web-based machine learning application designed to help everyday Fi
   - [2. Backend Setup (FastAPI + uv)](#2-backend-setup-fastapi--uv)
   - [3. Frontend Setup (React + Tailwind CSS)](#3-frontend-setup-react--tailwind-css)
 - [Running the Project Locally](#-running-the-project-locally)
-- [Dataset Sources](#-dataset-sources)
-- [Deployment Guide](#-deployment-guide)
 - [Troubleshooting](#-troubleshooting)
 
 ---
@@ -209,7 +207,7 @@ To run the full stack during local development, keep both terminal tabs active:
 
 ---
 
-## ❓ Troubleshooting
+## Troubleshooting
 
 - **Port 8000 in use:** Stop running Python tasks (`stop-process -name python` on PowerShell or `killall uvicorn` on Mac/Linux).
 - **Backend Connection Failed on Frontend:** Ensure the backend server is running in the second terminal tab on `http://127.0.0.1:8000`.
