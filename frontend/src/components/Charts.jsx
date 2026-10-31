@@ -1,120 +1,270 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { peso, fmtDate, addDays } from '../util'
+import { useMemo } from 'react'
+import { Line, Bar } from 'react-chartjs-2'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Filler,
+  Tooltip,
+  Legend,
+} from 'chart.js'
+import { peso, fmtDate } from '../util'
 
-function useWidth() {
-  const ref = useRef(null)
-  const [w, setW] = useState(640)
-  useEffect(() => {
-    if (!ref.current) return
-    const ro = new ResizeObserver(([e]) => setW(Math.max(260, Math.floor(e.contentRect.width))))
-    ro.observe(ref.current)
-    return () => ro.disconnect()
-  }, [])
-  return [ref, w]
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Filler, Tooltip, Legend)
+ChartJS.defaults.font.family = "'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif"
+ChartJS.defaults.font.size = 11
+ChartJS.defaults.maintainAspectRatio = false
+ChartJS.defaults.animation.duration = 250
+
+/* ------------------------------------------------------------------ theme helpers */
+function cssVar(name, fallback = '#888') {
+  if (typeof window === 'undefined') return fallback
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return v || fallback
 }
 
-function niceTicks(min, max, n = 4) {
-  const span = max - min || 1
-  const raw = span / n
-  const mag = Math.pow(10, Math.floor(Math.log10(raw)))
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) || mag * 10
-  const start = Math.ceil(min / step) * step
-  const out = []
-  for (let v = start; v <= max + 1e-9; v += step) out.push(+v.toFixed(6))
-  return out
+function resolveColor(c, fallback) {
+  if (typeof c === 'string' && c.startsWith('var(')) {
+    const m = c.match(/var\((--[^),]+)/)
+    if (m) return cssVar(m[1], fallback)
+  }
+  return c || fallback
 }
+
+function theme() {
+  return {
+    ink: cssVar('--ink', '#11261d'),
+    bg: cssVar('--bg', '#f1f4ec'),
+    ink3: cssVar('--ink-3', '#6f7f76'),
+    line: cssVar('--line', '#dfe5d7'),
+    leaf: cssVar('--leaf-line', '#16543f'),
+    amber: cssVar('--amber-line', '#c26a00'),
+    band: cssVar('--band', 'rgba(255,181,46,0.28)'),
+    up: cssVar('--up', '#d9503f'),
+    down: cssVar('--down', '#1e9a68'),
+    surface: cssVar('--surface', '#fff'),
+  }
+}
+
+function tooltipStyle(t) {
+  return {
+    backgroundColor: t.ink,
+    titleColor: t.bg,
+    bodyColor: t.bg,
+    borderColor: t.line,
+    borderWidth: 1,
+    padding: 10,
+    cornerRadius: 10,
+    displayColors: false,
+  }
+}
+
 const day = (iso) => Math.round(new Date(iso + 'T00:00:00').getTime() / 864e5)
 
 /* ------------------------------------------------------------------ forecast chart */
 export function ForecastChart({ history, forecast, horizon, bestBuy, weeks = 52, height = 340, label = 'Price' }) {
-  const [ref, W] = useWidth()
-  const [hover, setHover] = useState(null)
-  const m = { t: 16, r: 18, b: 30, l: 52 }
-  const w = W, h = height
+  const t = theme()
   const hist = history.slice(-weeks)
   const last = hist[hist.length - 1]
+  const hIndex = hist.length - 1
+  const fcPts = useMemo(
+    () => [{ date: last.date, price: last.price, lo: last.price, hi: last.price }, ...forecast],
+    [last, forecast],
+  )
 
-  const { x, y, yt, xt, pts } = useMemo(() => {
-    const all = [
-      ...hist.map((d) => ({ date: d.date, v: d.price, kind: 'actual' })),
-      ...forecast.map((d) => ({ date: d.date, v: d.price, lo: d.lo, hi: d.hi, kind: 'forecast' })),
-    ]
-    const d0 = day(all[0].date), d1 = day(all[all.length - 1].date)
-    const vals = [...hist.map((d) => d.price), ...forecast.flatMap((d) => [d.lo, d.hi])]
-    let lo = Math.min(...vals), hi = Math.max(...vals)
-    const pad = (hi - lo) * 0.08 || 1
-    lo -= pad; hi += pad
-    const x = (iso) => m.l + ((day(iso) - d0) / (d1 - d0)) * (w - m.l - m.r)
-    const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (h - m.t - m.b)
-    const yt = niceTicks(lo, hi, 4)
-    // x ticks: first of month roughly every 2-3 months
-    const xt = []
-    const start = new Date(all[0].date + 'T00:00:00'), end = new Date(all[all.length - 1].date + 'T00:00:00')
+  const labels = useMemo(
+    () => [...hist.map((d) => d.date), ...forecast.map((d) => d.date)],
+    [hist, forecast],
+  )
+
+  const tickIdx = useMemo(() => {
+    const out = []
+    const start = new Date(labels[0] + 'T00:00:00')
+    const end = new Date(labels[labels.length - 1] + 'T00:00:00')
     const step = weeks > 60 ? 4 : 2
     for (let d = new Date(start.getFullYear(), start.getMonth() + 1, 1); d <= end; d.setMonth(d.getMonth() + step)) {
-      xt.push(d.toISOString().slice(0, 10))
+      const iso = d.toISOString().slice(0, 10)
+      let best = 0
+      let bd = Infinity
+      labels.forEach((l, i) => {
+        const dd = Math.abs(day(l) - day(iso))
+        if (dd < bd) { bd = dd; best = i }
+      })
+      if (!out.includes(best)) out.push(best)
     }
-    return { x, y, yt, xt, pts: all }
-  }, [hist, forecast, w, h, weeks])
+    return out
+  }, [labels, weeks])
 
-  const line = (arr) => arr.map((p, i) => (i ? 'L' : 'M') + x(p.date).toFixed(1) + ',' + y(p.v).toFixed(1)).join('')
-  const histPts = pts.filter((p) => p.kind === 'actual')
-  const fcPts = [{ date: last.date, v: last.price, lo: last.price, hi: last.price }, ...pts.filter((p) => p.kind === 'forecast')]
-  const band =
-    fcPts.map((p, i) => (i ? 'L' : 'M') + x(p.date).toFixed(1) + ',' + y(p.hi).toFixed(1)).join('') +
-    [...fcPts].reverse().map((p) => 'L' + x(p.date).toFixed(1) + ',' + y(p.lo).toFixed(1)).join('') + 'Z'
-  const hx = x(addDays(last.date, horizon))
-  const bb = bestBuy && bestBuy.when !== 'now' ? fcPts.find((p) => p.date === bestBuy.when) : null
-
-  const onMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const px = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left
-    let best = null
-    for (const p of pts) {
-      const d = Math.abs(x(p.date) - px)
-      if (!best || d < best.d) best = { p, d }
+  const data = useMemo(() => {
+    const bandHi = labels.map((_, i) => (i >= hIndex ? (fcPts[i - hIndex] || {}).hi ?? null : null))
+    const bandLo = labels.map((_, i) => (i >= hIndex ? (fcPts[i - hIndex] || {}).lo ?? null : null))
+    const actual = labels.map((_, i) => (i <= hIndex ? hist[i].price : null))
+    const fc = labels.map((_, i) => (i >= hIndex ? (fcPts[i - hIndex] || {}).price ?? null : null))
+    return {
+      labels,
+      datasets: [
+        {
+          label: '80% range',
+          data: bandHi,
+          isBand: true,
+          borderColor: 'transparent',
+          borderWidth: 0,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          backgroundColor: t.band,
+          fill: '+1',
+          tension: 0,
+        },
+        {
+          label: '80% range',
+          data: bandLo,
+          isBand: true,
+          borderColor: 'transparent',
+          borderWidth: 0,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          backgroundColor: 'transparent',
+          fill: false,
+          tension: 0,
+        },
+        {
+          label: 'Recorded',
+          data: actual,
+          borderColor: t.leaf,
+          borderWidth: 2.4,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointBackgroundColor: t.leaf,
+          pointBorderColor: t.surface,
+          pointBorderWidth: 2.5,
+          tension: 0,
+          spanGaps: false,
+        },
+        {
+          label: 'Forecast',
+          data: fc,
+          borderColor: t.amber,
+          borderWidth: 2.4,
+          borderDash: [6, 5],
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointBackgroundColor: t.amber,
+          pointBorderColor: t.surface,
+          pointBorderWidth: 2.5,
+          tension: 0,
+          spanGaps: false,
+        },
+      ],
     }
-    setHover(best.p)
-  }
+  }, [labels, hist, fcPts, hIndex, t.band, t.leaf, t.amber, t.surface])
+
+  const overlay = useMemo(() => ({
+    id: 'forecastOverlay',
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea, scales: { x, y } } = chart
+      const lastX = x.getPixelForValue(hIndex)
+      ctx.save()
+
+      // forecast zone
+      ctx.fillStyle = t.band
+      ctx.globalAlpha = 0.35
+      ctx.fillRect(lastX, chartArea.top, chartArea.right - lastX, chartArea.bottom - chartArea.top)
+      ctx.globalAlpha = 1
+
+      // horizon marker (fractional week position)
+      const fi = hIndex + horizon / 7
+      const i0 = Math.max(0, Math.min(labels.length - 1, Math.floor(fi)))
+      const i1 = Math.max(0, Math.min(labels.length - 1, Math.ceil(fi)))
+      const frac = fi - Math.floor(fi)
+      const hx = x.getPixelForValue(i0) + (x.getPixelForValue(i1) - x.getPixelForValue(i0)) * frac
+      ctx.strokeStyle = t.amber
+      ctx.globalAlpha = 0.8
+      ctx.setLineDash([3, 4])
+      ctx.beginPath()
+      ctx.moveTo(hx, chartArea.top)
+      ctx.lineTo(hx, chartArea.bottom)
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.globalAlpha = 1
+      ctx.fillStyle = t.amber
+      ctx.font = '700 11px Figtree, system-ui'
+      ctx.textAlign = 'center'
+      ctx.fillText(`${horizon}d`, hx, chartArea.top + 10)
+
+      // "now" dot
+      ctx.beginPath()
+      ctx.arc(lastX, y.getPixelForValue(last.price), 4.5, 0, Math.PI * 2)
+      ctx.fillStyle = t.leaf
+      ctx.fill()
+      ctx.lineWidth = 2.5
+      ctx.strokeStyle = t.surface
+      ctx.stroke()
+
+      // best-buy ring
+      if (bestBuy && bestBuy.when !== 'now') {
+        const bi = labels.indexOf(bestBuy.when)
+        if (bi >= 0) {
+          ctx.beginPath()
+          ctx.arc(x.getPixelForValue(bi), y.getPixelForValue(fcPts[bi - hIndex].price), 7, 0, Math.PI * 2)
+          ctx.strokeStyle = cssVar('--dip', '#0b7a4b')
+          ctx.lineWidth = 3
+          ctx.stroke()
+        }
+      }
+      ctx.restore()
+    },
+  }), [hIndex, horizon, labels, last, bestBuy, fcPts, t])
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    layout: { padding: { top: 8, right: 8, bottom: 0, left: 0 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...tooltipStyle(t),
+        filter: (item) => !item.dataset.isBand,
+        callbacks: {
+          title: (items) => fmtDate(items[0].label, { month: 'short', day: 'numeric', year: 'numeric' }),
+          label: (item) => `${item.dataset.label}: ${peso(item.parsed.y)}`,
+          afterBody: (items) => {
+            const i = items[0].dataIndex
+            const lo = data.datasets[1].data[i]
+            const hi = data.datasets[0].data[i]
+            const out = []
+            if (lo != null && hi != null) out.push(`80% range: ${peso(lo, 0)} – ${peso(hi, 0)}`)
+            out.push(i > hIndex ? 'forecast' : 'recorded')
+            return out
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          color: t.ink3,
+          maxRotation: 0,
+          autoSkip: false,
+          callback: (_v, index) => (tickIdx.includes(index)
+            ? fmtDate(labels[index], { month: 'short', year: weeks > 60 ? '2-digit' : undefined })
+            : ''),
+        },
+      },
+      y: {
+        grid: { color: t.line },
+        ticks: { color: t.ink3, callback: (v) => peso(v, 0) },
+      },
+    },
+  }), [t, tickIdx, labels, weeks, data, hIndex])
 
   return (
-    <div className="chart" ref={ref} style={{ height }}>
-      <svg width={w} height={h} role="img" aria-label={`${label} history and forecast`}
-        onPointerMove={onMove} onPointerLeave={() => setHover(null)}>
-        {yt.map((v) => (
-          <g key={v}>
-            <line x1={m.l} x2={w - m.r} y1={y(v)} y2={y(v)} className="grid" />
-            <text x={m.l - 8} y={y(v) + 4} textAnchor="end" className="axis">{peso(v, v < 100 ? 0 : 0)}</text>
-          </g>
-        ))}
-        {xt.map((d) => (
-          <text key={d} x={x(d)} y={h - 8} textAnchor="middle" className="axis">
-            {fmtDate(d, { month: 'short', year: weeks > 60 ? '2-digit' : undefined })}
-          </text>
-        ))}
-        <rect x={x(last.date)} y={m.t} width={w - m.r - x(last.date)} height={h - m.t - m.b} className="fc-zone" />
-        <line x1={hx} x2={hx} y1={m.t} y2={h - m.b} className="hz-line" />
-        <text x={hx} y={m.t + 10} textAnchor="middle" className="hz-label">{horizon}d</text>
-        <path d={band} className="band" />
-        <path d={line(histPts)} className="line-actual" />
-        <path d={line(fcPts)} className="line-fc" />
-        <circle cx={x(last.date)} cy={y(last.price)} r="4.5" className="dot-now" />
-        {bb && <circle cx={x(bb.date)} cy={y(bb.v)} r="7" className="dot-best" />}
-        {hover && (
-          <g pointerEvents="none">
-            <line x1={x(hover.date)} x2={x(hover.date)} y1={m.t} y2={h - m.b} className="cross" />
-            <circle cx={x(hover.date)} cy={y(hover.v)} r="5" className={hover.kind === 'actual' ? 'dot-hover' : 'dot-hover fc'} />
-          </g>
-        )}
-      </svg>
-      {hover && (
-        <div className="tip" style={{ left: Math.min(Math.max(x(hover.date), 90), w - 90), top: Math.max(y(hover.v) - 12, 4) }}>
-          <b>{peso(hover.v)}</b>
-          <span>{fmtDate(hover.date, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-          {hover.kind === 'forecast' && <span className="tip-band">{peso(hover.lo)} – {peso(hover.hi)}</span>}
-          <em>{hover.kind === 'forecast' ? 'forecast' : 'recorded'}</em>
-        </div>
-      )}
+    <div className="chart" style={{ height }} role="img" aria-label={`${label} history and forecast`}>
+      <Line data={data} options={options} plugins={[overlay]} />
     </div>
   )
 }
@@ -139,103 +289,193 @@ export function Sparkline({ values, forecast = [], width = 140, height = 36, cls
 /* ----------------------------------------------------------------- seasonal bars */
 const MONTHS = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D']
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
 export function SeasonBars({ values, currentMonth, height = 170 }) {
-  const [ref, W] = useWidth()
-  const [hov, setHov] = useState(null)
-  const m = { t: 18, b: 22, l: 6, r: 6 }
+  const t = theme()
   const max = Math.max(...values.map(Math.abs), 5)
-  const bw = (W - m.l - m.r) / 12
-  const mid = m.t + (height - m.t - m.b) / 2
-  const sc = (height - m.t - m.b) / 2 / max
   const cheapest = values.indexOf(Math.min(...values))
+
+  const data = useMemo(() => ({
+    labels: MONTHS,
+    datasets: [{
+      data: values,
+      backgroundColor: values.map((v) => (v >= 0 ? t.up : t.down)),
+      borderRadius: 3,
+      borderSkipped: false,
+      borderColor: values.map((_, i) => (i === currentMonth ? t.ink3 : 'transparent')),
+      borderWidth: values.map((_, i) => (i === currentMonth ? 1 : 0)),
+      barPercentage: 0.68,
+      categoryPercentage: 1,
+    }],
+  }), [values, currentMonth, t])
+
+  const cheapestLabel = useMemo(() => ({
+    id: 'cheapestLabel',
+    afterDatasetsDraw(chart) {
+      const el = chart.getDatasetMeta(0).data[cheapest]
+      if (!el) return
+      const { ctx } = chart
+      const v = values[cheapest]
+      ctx.save()
+      ctx.fillStyle = t.ink
+      ctx.font = '700 11px Figtree, system-ui'
+      ctx.textAlign = 'center'
+      const txt = (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(0) + '%'
+      ctx.fillText(txt, el.x, v >= 0 ? el.y - 6 : el.base + 14)
+      ctx.restore()
+    },
+  }), [cheapest, values, t])
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...tooltipStyle(t),
+        callbacks: {
+          title: (items) => MONTH_FULL[items[0].dataIndex],
+          label: (item) => {
+            const v = item.parsed.y
+            return `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v).toFixed(0)}% vs. trend`
+          },
+        },
+      },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: t.ink3 } },
+      y: {
+        min: -max,
+        max,
+        grid: { color: (ctx) => (ctx.tick && ctx.tick.value === 0 ? t.ink3 : t.line) },
+        ticks: { color: t.ink3, callback: (v) => `${v > 0 ? '+' : ''}${v}%`, stepSize: Math.ceil(max / 2) },
+      },
+    },
+  }), [t, max])
+
   return (
-    <div className="chart" ref={ref} style={{ height }}>
-      <svg width={W} height={height} role="img" aria-label="Average seasonal price effect by month">
-        <line x1={m.l} x2={W - m.r} y1={mid} y2={mid} className="grid zero" />
-        {values.map((v, i) => {
-          const bh = Math.max(Math.abs(v) * sc, 1.5)
-          const bx = m.l + i * bw + bw * 0.16
-          return (
-            <g key={i} onPointerEnter={() => setHov(i)} onPointerLeave={() => setHov(null)}>
-              <rect x={m.l + i * bw} y={m.t - 8} width={bw} height={height - m.t - m.b + 8} fill="transparent" />
-              <rect x={bx} y={v >= 0 ? mid - bh : mid} width={bw * 0.68} height={bh} rx="3" className={v >= 0 ? 'bar-up' : 'bar-down'}
-                opacity={hov === null || hov === i ? 1 : 0.55} />
-              {i === currentMonth && <rect x={m.l + i * bw + 1} y={m.t - 6} width={bw - 2} height={height - m.t - m.b + 10} rx="6" className="cur-month" />}
-              <text x={m.l + i * bw + bw / 2} y={height - 6} textAnchor="middle" className="axis">{MONTHS[i]}</text>
-              {(hov === i || (hov === null && i === cheapest)) && (
-                <text x={m.l + i * bw + bw / 2} y={v >= 0 ? mid - bh - 5 : mid + bh + 12} textAnchor="middle" className="bar-label">
-                  {v > 0 ? '+' : v < 0 ? '−' : ''}{Math.abs(v).toFixed(0)}%
-                </text>
-              )}
-            </g>
-          )
-        })}
-      </svg>
-      {hov !== null && <div className="tip small" style={{ left: m.l + hov * bw + bw / 2, top: 0 }}><b>{MONTH_FULL[hov]}</b></div>}
+    <div className="chart" style={{ height }} role="img" aria-label="Average seasonal price effect by month">
+      <Bar data={data} options={options} plugins={[cheapestLabel]} />
     </div>
   )
 }
 
 /* --------------------------------------------------------------- multi-line chart */
 export function MultiLine({ rows, series, height = 230 }) {
-  const [ref, W] = useWidth()
-  const [hov, setHov] = useState(null)
-  const m = { t: 12, r: 12, b: 26, l: 52 }
-  const vals = rows.flatMap((r) => series.map((s) => r[s.key]))
-  let lo = Math.min(...vals), hi = Math.max(...vals)
-  const pad = (hi - lo) * 0.1 || 1
-  lo -= pad; hi += pad
-  const x = (i) => m.l + (i / (rows.length - 1)) * (W - m.l - m.r)
-  const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (height - m.t - m.b)
-  const yt = niceTicks(lo, hi, 3)
-  const path = (k) => rows.map((r, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ',' + y(r[k]).toFixed(1)).join('')
-  const move = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const px = e.clientX - rect.left
-    setHov(Math.max(0, Math.min(rows.length - 1, Math.round(((px - m.l) / (W - m.l - m.r)) * (rows.length - 1)))))
-  }
+  const t = theme()
+  const labels = rows.map((r) => r.date)
+  const step = Math.max(1, Math.ceil(rows.length / 5))
+
+  const data = useMemo(() => ({
+    labels,
+    datasets: series.map((s) => ({
+      label: s.label,
+      data: rows.map((r) => r[s.key]),
+      borderColor: resolveColor(s.color, t.ink),
+      borderWidth: s.w || 2,
+      borderDash: s.dash ? s.dash.split(/\s+/).map(Number) : undefined,
+      pointRadius: 0,
+      pointHoverRadius: 4,
+      pointBackgroundColor: resolveColor(s.color, t.ink),
+      pointBorderColor: t.surface,
+      pointBorderWidth: 2,
+      tension: 0,
+    })),
+  }), [labels, rows, series, t])
+
+  const options = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...tooltipStyle(t),
+        displayColors: true,
+        callbacks: {
+          title: (items) => fmtDate(items[0].label, { month: 'short', day: 'numeric' }),
+          label: (item) => `${item.dataset.label}: ${peso(item.parsed.y)}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: { color: t.ink3, maxRotation: 0, autoSkip: false, callback: (_v, i) => (i % step === 0 ? fmtDate(labels[i]) : '') },
+      },
+      y: { grid: { color: t.line }, ticks: { color: t.ink3, callback: (v) => peso(v, 0) } },
+    },
+  }), [t, labels, step])
+
   return (
-    <div className="chart" ref={ref} style={{ height }}>
-      <svg width={W} height={height} onPointerMove={move} onPointerLeave={() => setHov(null)} role="img" aria-label="Backtest: actual versus predicted prices">
-        {yt.map((v) => (<g key={v}><line x1={m.l} x2={W - m.r} y1={y(v)} y2={y(v)} className="grid" /><text x={m.l - 8} y={y(v) + 4} textAnchor="end" className="axis">{peso(v, 0)}</text></g>))}
-        {rows.map((r, i) => (i % Math.ceil(rows.length / 5) === 0 ? <text key={i} x={x(i)} y={height - 7} textAnchor="middle" className="axis">{fmtDate(r.date)}</text> : null))}
-        {series.map((s) => (<path key={s.key} d={path(s.key)} fill="none" stroke={s.color} strokeWidth={s.w || 2} strokeDasharray={s.dash} strokeLinejoin="round" strokeLinecap="round" />))}
-        {hov !== null && (
-          <g pointerEvents="none">
-            <line x1={x(hov)} x2={x(hov)} y1={m.t} y2={height - m.b} className="cross" />
-            {series.map((s) => <circle key={s.key} cx={x(hov)} cy={y(rows[hov][s.key])} r="4" fill={s.color} className="ring" />)}
-          </g>
-        )}
-      </svg>
-      {hov !== null && (
-        <div className="tip" style={{ left: Math.min(Math.max(x(hov), 100), W - 100), top: 4 }}>
-          <span>{fmtDate(rows[hov].date, { month: 'short', day: 'numeric' })}</span>
-          {series.map((s) => (<b key={s.key} className="tip-row"><i style={{ background: s.color }} />{s.label} {peso(rows[hov][s.key])}</b>))}
-        </div>
-      )}
+    <div className="chart" style={{ height }} role="img" aria-label="Backtest: actual versus predicted prices">
+      <Line data={data} options={options} />
     </div>
   )
 }
 
 /* -------------------------------------------------------------- diverging driver bars */
 export function DriverBars({ items }) {
+  const t = theme()
   const max = Math.max(...items.map((i) => Math.abs(i.value)), 2)
+  const height = Math.max(120, items.length * 38)
+
+  const data = useMemo(() => ({
+    labels: items.map((i) => i.label),
+    datasets: [{
+      data: items.map((i) => i.value),
+      backgroundColor: items.map((i) => (i.value >= 0 ? t.up : t.down)),
+      borderRadius: 4,
+      borderSkipped: false,
+      barPercentage: 0.55,
+    }],
+  }), [items, t])
+
+  const valueLabels = useMemo(() => ({
+    id: 'driverValues',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart
+      const meta = chart.getDatasetMeta(0)
+      ctx.save()
+      ctx.font = '700 11px Figtree, system-ui'
+      ctx.fillStyle = t.ink
+      ctx.textBaseline = 'middle'
+      meta.data.forEach((el, i) => {
+        const v = items[i].value
+        const txt = (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(1) + '%'
+        ctx.textAlign = v >= 0 ? 'left' : 'right'
+        ctx.fillText(txt, el.x + (v >= 0 ? 6 : -6), el.y)
+      })
+      ctx.restore()
+    },
+  }), [items, t])
+
+  const options = useMemo(() => ({
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { left: 8, right: 44 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        ...tooltipStyle(t),
+        callbacks: { label: (item) => `${item.parsed.x > 0 ? '+' : ''}${item.parsed.x.toFixed(1)}%` },
+      },
+    },
+    scales: {
+      x: {
+        min: -max,
+        max,
+        grid: { color: (ctx) => (ctx.tick && ctx.tick.value === 0 ? t.ink3 : t.line) },
+        ticks: { color: t.ink3, callback: (v) => `${v}%` },
+      },
+      y: { grid: { display: false }, ticks: { color: t.ink, font: { size: 12 } } },
+    },
+  }), [t, max])
+
   return (
-    <div className="drivers">
-      {items.map((it) => {
-        const w = (Math.abs(it.value) / max) * 50
-        return (
-          <div className="driver" key={it.label}>
-            <span className="driver-label">{it.label}</span>
-            <div className="driver-track" role="img" aria-label={`${it.label} ${it.value.toFixed(1)} percent`}>
-              <i className="driver-mid" />
-              <i className={'driver-fill ' + (it.value >= 0 ? 'up' : 'down')}
-                style={{ width: w + '%', left: it.value >= 0 ? '50%' : 50 - w + '%' }} />
-            </div>
-            <b className="driver-val">{it.value > 0 ? '+' : it.value < 0 ? '−' : ''}{Math.abs(it.value).toFixed(1)}%</b>
-          </div>
-        )
-      })}
+    <div className="chart" style={{ height }} role="img" aria-label="Forecast drivers by contribution">
+      <Bar data={data} options={options} plugins={[valueLabels]} />
     </div>
   )
 }
