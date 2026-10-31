@@ -138,10 +138,11 @@ class PipelineRun(BaseModel):
 
 
 @API.post("/pipeline/run")
-def pipe_run(body: PipelineRun):
-    if body.mode not in pipeline.MODES:
+def pipe_run(body: PipelineRun | None = None):
+    mode = body.mode if body else "live"
+    if mode not in pipeline.MODES:
         return _err(f"Unknown mode. Use one of: {', '.join(pipeline.MODES)}", 400)
-    rep = pipeline.run(body.mode)
+    rep = pipeline.run(mode)
     if rep["status"] == "error" and not rep.get("log"):
         return JSONResponse(rep, status_code=409)
     return rep

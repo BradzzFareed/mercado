@@ -4,12 +4,13 @@ import { Logo } from '../components/Icons'
 import { Sprout, TrendingUp, Handshake, ArrowRight, Lock, Mail, User, Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../supabaseClient'
 
-export default function Auth() {
+export default function Auth({ onLogin }) {
   const { nav } = useApp()
   const [isSignup, setIsSignup] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({ name: '', username: '', email: '', password: '' })
   const [error, setError] = useState('')
+  const finish = () => (onLogin ? onLogin() : nav('board'))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -28,7 +29,7 @@ export default function Auth() {
       })
       
       if (signUpError) return setError(signUpError.message)
-      nav('board')
+      finish()
       
     } else {
       let loginEmail = formData.email
@@ -56,7 +57,7 @@ export default function Auth() {
         return setError(signInError.message)
       }
       
-      nav('board')
+      finish()
     }
   }
 
