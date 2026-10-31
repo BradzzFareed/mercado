@@ -18,7 +18,7 @@ export default function Layout({ children }) {
   const active = route?.page === 'commodity' ? 'board' : route?.page
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    if (supabase) await supabase.auth.signOut()
     nav('auth')
   }
 

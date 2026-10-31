@@ -61,6 +61,19 @@ export default function Auth({ onLogin }) {
     }
   }
 
+  if (!supabase) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem', background: '#060e0a', color: '#e2e8f0', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+        <div style={{ maxWidth: 520, padding: '2rem', borderRadius: 16, border: '1px solid rgba(255, 255, 255, 0.08)', background: 'rgba(6, 14, 10, 0.7)' }}>
+          <h2 style={{ margin: '0 0 0.75rem', color: '#fff' }}>Sign-in is not configured</h2>
+          <p style={{ margin: 0, color: '#94a3b8', lineHeight: 1.6 }}>
+            Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> in <code>frontend/.env</code>, then restart <code>pnpm dev</code>.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="auth-container">
       <style>{`
