@@ -1,0 +1,12 @@
+# Python / uv
+backend/.venv/
+backend/__pycache__/
+*.pyc
+
+# Node / pnpm
+frontend/node_modules/
+frontend/dist/
+
+# System
+.DS_Store
+*.log
