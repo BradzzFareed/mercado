@@ -1,48 +1,71 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { ShoppingCart, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useEffect, useState } from 'react'
+import { AppProvider, useApp } from './state'
+import { ErrorBox, Training } from './components/Common'
+import { supabase } from './supabaseClient'
+import Board from './pages/Board'
+import Detail from './pages/Detail'
+import MapPage from './pages/MapPage'
+import Planner from './pages/Planner'
+import WhatIf from './pages/WhatIf'
+import ModelLab from './pages/ModelLab'
+import Pipeline from './pages/Pipeline'
+import Auth from './pages/Auth'
+import Layout from './components/Layout'
 
-function App() {
-  const [status, setStatus] = useState('Connecting...');
-  const [isConnected, setIsConnected] = useState(false);
+function AppRouter() {
+  const { route, nav, meta, metaError, loadMeta, t } = useApp()
+  const [session, setSession] = useState(null)
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    axios.get('http://127.0.0.1:8000/api/v1/health')
-      .then((res) => {
-        setStatus(res.data.system);
-        setIsConnected(true);
-      })
-      .catch(() => {
-        setStatus('Backend Unreachable');
-        setIsConnected(false);
-      });
-  }, []);
+    let alive = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (alive) {
+        setSession(data.session)
+        setChecking(false)
+      }
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (alive) {
+        setSession(s)
+        setChecking(false)
+      }
+    })
+    return () => {
+      alive = false
+      sub.subscription.unsubscribe()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (checking) return
+    if (!session && route.page !== 'auth') nav('auth')
+    if (session && route.page === 'auth') nav('board')
+  }, [checking, session, route.page, nav])
+
+  if (checking) return <Training place="Mercado" />
+  if (!session || route.page === 'auth') return <Auth onLogin={() => nav('board')} />
+
+  let page = null
+  if (meta) {
+    if (route.page === 'commodity') page = <Detail key={route.arg} id={route.arg} />
+    else if (route.page === 'map') page = <MapPage />
+    else if (route.page === 'planner') page = <Planner />
+    else if (route.page === 'whatif') page = <WhatIf />
+    else if (route.page === 'lab') page = <ModelLab />
+    else if (route.page === 'pipeline') page = <Pipeline />
+    else page = <Board />
+  }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 p-8">
-      <div className="max-w-3xl mx-auto space-y-6">
-        <header className="flex items-center space-x-3 border-b pb-4">
-          <div className="p-3 bg-emerald-600 text-white rounded-xl">
-            <ShoppingCart className="w-8 h-8" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold">Mercado</h1>
-            <p className="text-slate-500 text-sm">Agri-Market Price Forecasting Platform</p>
-          </div>
-        </header>
-
-        <div className={`p-4 rounded-xl border flex items-center space-x-3 ${
-          isConnected ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900'
-        }`}>
-          {isConnected ? <CheckCircle2 className="w-6 h-6 text-emerald-600" /> : <AlertTriangle className="w-6 h-6 text-amber-600" />}
-          <div>
-            <span className="text-xs font-bold uppercase block">System Status</span>
-            <span className="font-semibold">{status}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    <Layout>
+      {metaError && <ErrorBox error={metaError} retry={loadMeta} />}
+      {!meta && !metaError && <p className="muted">{t('common.loading')}</p>}
+      {page}
+    </Layout>
+  )
 }
 
-export default App;
+export default function App() {
+  return <AppProvider><AppRouter /></AppProvider>
+}

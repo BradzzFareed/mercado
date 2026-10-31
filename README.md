@@ -8,18 +8,20 @@ Mercado is a web-based machine learning application designed to help everyday Fi
 
 ## Table of Contents
 
-- [Project Overview](#-project-overview)
-- [Key Features](#-key-features)
-- [Tech Stack](#-tech-stack)
-- [System Architecture & Data Flow](#-system-architecture--data-flow)
-- [Repository Structure](#-repository-structure)
-- [Development Requirements](#-development-requirements)
-- [Setup & Installation Guide](#-setup--installation-guide)
+- [Project Overview](#project-overview)
+- [Key Features](#key-features)
+- [Tech Stack](#tech-stack)
+- [System Architecture & Data Flow](#system-architecture--data-flow)
+- [Repository Structure](#repository-structure)
+- [Development Requirements](#development-requirements)
+- [Setup & Installation Guide](#setup--installation-guide)
   - [1. Cloning the Repository](#1-cloning-the-repository)
   - [2. Backend Setup (FastAPI + uv)](#2-backend-setup-fastapi--uv)
-  - [3. Frontend Setup (React + Tailwind CSS)](#3-frontend-setup-react--tailwind-css)
-- [Running the Project Locally](#-running-the-project-locally)
-- [Troubleshooting](#-troubleshooting)
+  - [3. Frontend Setup (React + Vite)](#3-frontend-setup-react--vite)
+- [Running the Project Locally](#running-the-project-locally)
+- [Tests](#tests)
+- [Environment Variables](#environment-variables)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -37,11 +39,15 @@ Food price instability caused by seasonal weather patterns, transportation costs
 
 ## Key Features
 
-- **Location Selector:** Interactive dropdowns to filter market data by Region and Province.
-- **Commodity Price Forecasts:** Interactive time-series charts powered by Chart.js displaying 7- to 30-day predicted retail prices.
-- **Smart Buying Alerts:** Color-coded badges indicating whether a staple is in a "Price Dip" (optimal buying window) or "Price Surge" (expected increase).
-- **Fast REST API:** High-performance FastAPI backend delivering predictions in milliseconds.
-- **Modern Responsive UI:** Clean, mobile-friendly interface styled with Tailwind CSS and Lucide React icons.
+- **Supabase Authentication:** Email/password sign-up and sign-in, with username lookup.
+- **Price Board:** One price tag per commodity with today's price, a sparkline, the forecast, and a Surge / Dip / Steady flag.
+- **Commodity Detail:** Interactive Chart.js forecast with an 80% range, best day to buy, drivers, seasonality, and a back-test comparison.
+- **Price Map:** A dot-matrix map of the Philippines colored by expected price change.
+- **Carinderia Planner:** Menu costing, margin at risk, and a weekly shopping list.
+- **What-If Lab:** Typhoon and fuel sliders layered on the forecast.
+- **Model Lab:** Ensemble accuracy versus the naive "prices stay put" baseline.
+- **Data Pipeline:** Source status, "Run pipeline now", and "Simulate a new week".
+- **English / Filipino toggle, dark mode, and mobile layout.**
 
 ---
 
@@ -49,86 +55,111 @@ Food price instability caused by seasonal weather patterns, transportation costs
 
 ### Backend (API & ML Engine)
 
-- **Language:** Python 3.10+
-- **Package & Environment Manager:** [`uv`](https://astral.sh/uv) (Ultra-fast Rust-based package manager)
+- **Language:** Python 3.14+
+- **Package & Environment Manager:** [`uv`](https://astral.sh/uv)
 - **Web Framework:** [FastAPI](https://fastapi.tiangolo.com/)
 - **ASGI Server:** Uvicorn
-- **Data Processing & ML:** Pandas, NumPy, Scikit-Learn, XGBoost, Joblib
-- **Database & ORM:** SQLite (Development) / PostgreSQL (Production) via SQLAlchemy
+- **Data Processing & ML:** Pandas, NumPy, Scikit-Learn
+- **Database:** SQLite through the standard-library `sqlite3` module
+- **Testing:** pytest with `fastapi.testclient`
+
+> SQLAlchemy and XGBoost are declared dependencies for a planned data-layer/model swap; the live forecast engine still uses `sqlite3` and scikit-learn.
 
 ### Frontend (User Interface)
 
-- **Framework:** React.js initialized via [Vite](https://vitejs.dev/)
+- **Framework:** React 19 via [Vite](https://vitejs.dev/)
 - **Package Manager:** [`pnpm`](https://pnpm.io/)
-- **Styling & Design:** [Tailwind CSS](https://tailwindcss.com/) (`@tailwindcss/vite`)
-- **Icon Set:** [Lucide React](https://lucide.dev/)
+- **Styling:** Tailwind CSS v4 (`@tailwindcss/vite`) coexisting with the legacy `styles.css` design system
+- **Icons:** [Lucide React](https://lucide.dev/) plus a small custom SVG icon set
 - **HTTP Client:** Axios
 - **Data Visualization:** Chart.js with `react-chartjs-2`
+- **Auth:** `@supabase/supabase-js`
+- **Linting:** ESLint 10 with React Hooks and React Refresh plugins
 
 ---
 
 ## System Architecture & Data Flow
 
-1. **User Request:** The user selects a location (*e.g., Region IV-A / Batangas*) and commodity (*e.g., Pork Belly*) on the React UI.
-2. **API Call:** Axios sends a request to FastAPI: `GET /api/v1/predict?region=4A&commodity=pork_belly`.
-3. **Inference & DB Retrieval:** FastAPI queries historical price logs from the database, passes inputs to the pre-trained `.joblib` model, and generates future price estimates.
-4. **JSON Response:** FastAPI returns formatted prediction arrays and status indicators.
-5. **Rendering:** React receives the JSON payload and updates Chart.js graph components in real time.
+1. **User Request:** The user picks a province/market and commodity in the React UI.
+2. **API Call:** Axios calls FastAPI through the Vite dev proxy, e.g. `GET /api/v1/forecast?province=ncr&commodity=rice`.
+3. **Inference & DB Retrieval:** FastAPI reads weekly price history from SQLite, trains/blends the forecast models, and returns prices, uncertainty bands, and signals.
+4. **JSON Response:** The frontend receives formatted prediction arrays and status indicators.
+5. **Rendering:** React updates Chart.js graphs, the price board, and the map.
+
+### API endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/api/v1/health` | Row count and data range |
+| GET | `/api/v1/meta` | Provinces, regions, commodities, dishes, horizons, dataset info |
+| GET | `/api/v1/overview?province=` | Price board: per-commodity summaries and basket |
+| GET | `/api/v1/forecast?province=&commodity=` | Full detail: history, forecast, drivers, seasonality, back-test |
+| GET | `/api/v1/map?commodity=` | All provinces for one commodity |
+| GET | `/api/v1/compare?province=&commodity=` | Nearby cheaper markets |
+| GET | `/api/v1/pipeline` | Dataset, scheduler, sources, recent runs |
+| POST | `/api/v1/pipeline/run` | Body `{"mode": "live|wfp|inbox|da|simulate|seed"}` |
 
 ---
 
 ## Repository Structure
 
 ```text
-mercado/                       <-- Root Repository Directory
-├── .gitignore                 <-- Git Ignore File
-├── README.md                  <-- Project Documentation
+mercado/
+├── .gitignore
+├── AGENTS.md                  <-- Notes for AI coding agents
+├── README.md
 │
-├── backend/                   <-- FastAPI Backend
-│   ├── .venv/                 <-- Virtual Environment (Managed by uv)
-│   ├── main.py                <-- FastAPI Application & Route Definitions
-│   ├── models/                <-- Trained ML Model Binaries (.joblib)
-│   ├── pyproject.toml         <-- Python Dependencies Metadata
-│   └── uv.lock                <-- Deterministic Package Lockfile
+├── backend/                   <-- FastAPI backend
+│   ├── main.py                <-- App, lifespan (seed/warm/scheduler), /api/v1 routes
+│   ├── pyproject.toml         <-- Dependencies managed by uv
+│   ├── uv.lock
+│   ├── mercado/               <-- Forecast engine and data pipeline
+│   │   ├── catalog.py         <-- Static commodity/market/scenario reference data
+│   │   ├── commodities.py     <-- Commodity metadata and shock sensitivities
+│   │   ├── geo.py             <-- Regions, provinces, market coordinates
+│   │   ├── sample_data.py     <-- Deterministic synthetic history generator
+│   │   ├── simulate.py        <-- Writes sample CSV exports
+│   │   ├── models.py          <-- Naive, Holt-Winters, Ridge, gradient-boosted trees
+│   │   ├── forecast.py        <-- Caching, signals, drivers, bulk views
+│   │   ├── pipeline.py        <-- fetch -> clean -> store (live, wfp, inbox, da, simulate, seed)
+│   │   ├── scheduler.py       <-- Background thread that reruns the pipeline
+│   │   └── store.py           <-- SQLite storage and weekly series access
+│   ├── data/                  <-- Generated at runtime (mercado.db is gitignored)
+│   └── tests/
+│       └── test_mercado.py
 │
-└── frontend/                  <-- React Frontend
-    ├── node_modules/          <-- Installed Frontend Packages
-    ├── package.json           <-- Frontend Dependencies & Build Scripts
-    ├── pnpm-lock.yaml         <-- Dependency Lockfile
-    ├── vite.config.js         <-- Vite & Tailwind Plugin Configuration
+└── frontend/                  <-- React frontend
+    ├── .env.example           <-- Copy to .env for Supabase/API config
+    ├── index.html
+    ├── package.json
+    ├── pnpm-lock.yaml
+    ├── vite.config.js         <-- React + Tailwind plugins, /api proxy to :8000
+    ├── eslint.config.js
     └── src/
-        ├── index.css          <-- Global Stylesheet (@import "tailwindcss";)
-        ├── App.jsx            <-- Main UI Container Component
-        └── main.jsx           <-- React Root Mounting Point
+        ├── main.jsx           <-- React root; imports Tailwind then legacy CSS
+        ├── App.jsx            <-- Hash router + Supabase session guard
+        ├── state.jsx          <-- App context: route, meta, province, horizon, language, theme
+        ├── api.js             <-- Axios wrapper with in-memory cache
+        ├── supabaseClient.js  <-- Supabase client from env vars
+        ├── i18n.js            <-- English / Filipino strings
+        ├── alerts.js, util.js
+        ├── index.css          <-- Tailwind entry point
+        ├── styles.css         <-- Legacy Mercado design system (CSS variables, components)
+        ├── pages/             <-- Auth, Board, Detail, MapPage, Planner, WhatIf, ModelLab, Pipeline
+        └── components/        <-- Layout, Charts (Chart.js + SVG sparkline), PhilippinesMap, PriceTag, Common, Icons, LocationPicker
 ```
 
 ---
 
 ## Development Requirements
 
-Before installing the project, make sure your computer has the following tools installed:
-
-1. **Git** (v2.30+): [Download Git](https://git-scm.com/)
-2. **Node.js** (v18.0+): [Download Node.js](https://nodejs.org/)
-3. **`pnpm`** (Package Manager): Install globally via terminal:
-
-   ```bash
-   npm install -g pnpm
-   ```
-
-4. **Python** (v3.10+): [Download Python](https://www.python.org/) *(Ensure "Add Python to PATH" is enabled on Windows)*.
-5. **`uv`** (Python Package Manager):
-   - **Windows (PowerShell):**
-
-     ```powershell
-     powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-     ```
-
-   - **macOS / Linux:**
-
-     ```bash
-     curl -LsSf https://astral.sh/uv/install.sh | sh
-     ```
+1. **Git** (v2.30+)
+2. **Node.js** (v18+; v24 recommended)
+3. **pnpm**: `npm install -g pnpm`
+4. **Python** 3.14+
+5. **uv**:
+   - Windows (PowerShell): `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
+   - macOS / Linux: `curl -LsSf https://astral.sh/uv/install.sh | sh`
 
 ---
 
@@ -136,79 +167,92 @@ Before installing the project, make sure your computer has the following tools i
 
 ### 1. Cloning the Repository
 
-Open your terminal and clone the project:
-
 ```bash
-git clone <>
+git clone <repo-url>
 cd mercado
 ```
 
----
-
 ### 2. Backend Setup (FastAPI + uv)
 
-1. Open your terminal and navigate to the `backend/` directory:
+```bash
+cd backend
+uv sync
+uv run uvicorn main:app --reload
+```
 
-   ```bash
-   cd backend
-   ```
+The first launch creates `backend/data/mercado.db`, seeds a synthetic price history, and warms forecasts in a background thread. Verify:
 
-2. Install backend dependencies and initialize the virtual environment:
+- Root: `http://127.0.0.1:8000/`
+- Health: `http://127.0.0.1:8000/api/v1/health`
+- Swagger docs: `http://127.0.0.1:8000/docs`
 
-   ```bash
-   uv sync
-   ```
+### 3. Frontend Setup (React + Vite)
 
-3. Start the FastAPI development server:
+```bash
+cd frontend
+pnpm install
+cp .env.example .env    # then fill in the Supabase values
+pnpm dev
+```
 
-   ```bash
-   uv run uvicorn main:app --reload
-   ```
-
-4. Verify the backend is active:
-   - **Root API:** Open `http://127.0.0.1:8000/` in your browser.
-   - **Health Check:** Open `http://127.0.0.1:8000/api/v1/health`.
-   - **Interactive API Docs (Swagger UI):** Open `http://127.0.0.1:8000/docs`.
-
----
-
-### 3. Frontend Setup (React + Tailwind CSS)
-
-1. Open a **new terminal tab/window** and navigate to the `frontend/` directory:
-
-   ```bash
-   cd frontend
-   ```
-
-2. Install all JavaScript dependencies:
-
-   ```bash
-   pnpm install
-   ```
-
-3. Start the React development server:
-
-   ```bash
-   pnpm run dev
-   ```
-
-4. Open `http://localhost:5173` in your browser. You should see the Mercado web application displaying **"System Status: Mercado Backend Service"** in green.
+Open `http://localhost:5173`. Vite proxies `/api` to `http://127.0.0.1:8000`, so no CORS configuration is needed in development.
 
 ---
 
 ## Running the Project Locally
 
-To run the full stack during local development, keep both terminal tabs active:
+| Service | Working Directory | Command | URL |
+| --- | --- | --- | --- |
+| **FastAPI Backend** | `backend/` | `uv run uvicorn main:app --reload` | `http://127.0.0.1:8000` |
+| **React Frontend** | `frontend/` | `pnpm dev` | `http://localhost:5173` |
 
-| Service             | Working Directory | Command                              | URL                     |
-| ------------------- | ----------------- | ------------------------------------ | ----------------------- |
-| **FastAPI Backend** | `mercado/backend` | `uv run uvicorn main:app --reload`   | `http://127.0.0.1:8000` |
-| **React Frontend**  | `mercado/frontend`| `pnpm run dev`                       | `http://localhost:5173` |
+---
+
+## Tests
+
+```bash
+cd backend
+uv run pytest -q
+```
+
+The suite covers sample-data determinism, ensemble quality versus the naive baseline, the WFP normalizer, the API endpoints, and pipeline modes.
+
+Frontend checks:
+
+```bash
+cd frontend
+pnpm lint
+pnpm build
+```
+
+---
+
+## Environment Variables
+
+### Backend
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `MERCADO_DATA_DIR` | `backend/data` | Where SQLite and pipeline state live |
+| `MERCADO_WARM` | `1` | Set to `0` to skip pre-computing forecasts at startup |
+| `MERCADO_SCHEDULER` | `1` | Set to `0` to disable the daily pipeline refresh |
+| `MERCADO_REFRESH_HOURS` | `24` | Scheduler interval |
+
+### Frontend (`frontend/.env`)
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_API_BASE` | Backend origin. Leave empty in dev to use the Vite proxy. |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
 
 ---
 
 ## Troubleshooting
 
-- **Port 8000 in use:** Stop running Python tasks (`stop-process -name python` on PowerShell or `killall uvicorn` on Mac/Linux).
-- **Backend Connection Failed on Frontend:** Ensure the backend server is running in the second terminal tab on `http://127.0.0.1:8000`.
-- **Missing Package Error in Python:** Ensure you run commands using `uv run` (e.g., `uv run uvicorn main:app --reload`).
+- **Port 8000 in use:** Stop other uvicorn/Python processes.
+- **Frontend cannot reach the backend:** Ensure `uv run uvicorn main:app --reload` is running and `VITE_API_BASE` is empty in dev (so the proxy is used).
+- **Login screen errors:** Confirm `frontend/.env` exists and contains valid Supabase values.
+- **Blank page or "Something went wrong":** The API is not running, or the database is still seeding. Check `http://127.0.0.1:8000/api/v1/health`.
+- **Reset everything:** Delete `backend/data/mercado.db` and restart; it re-seeds itself.
+- **Missing Python package:** Always run through `uv run` (e.g., `uv run uvicorn main:app --reload`).
