@@ -1,4 +1,4 @@
-# Mercado 🛒
+# Mercado
 
 > **Location-Aware Agri-Market Retail Price Forecasting Platform**
 
@@ -6,7 +6,7 @@ Mercado is a web-based machine learning application designed to help everyday Fi
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Project Overview](#-project-overview)
 - [Key Features](#-key-features)
@@ -25,7 +25,7 @@ Mercado is a web-based machine learning application designed to help everyday Fi
 
 ---
 
-## 🎯 Project Overview
+## Project Overview
 
 Food price instability caused by seasonal weather patterns, transportation costs, and market disruptions creates financial uncertainty for Filipino households operating on tight budgets. Official price reports are often presented as national averages or static tables, making them difficult for local consumers to apply to their immediate wet markets (*palengkes*).
 
@@ -37,17 +37,17 @@ Food price instability caused by seasonal weather patterns, transportation costs
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-- 📍 **Location Selector:** Interactive dropdowns to filter market data by Region and Province.
-- 📈 **Commodity Price Forecasts:** Interactive time-series charts powered by Chart.js displaying 7- to 30-day predicted retail prices.
-- 🏷️ **Smart Buying Alerts:** Color-coded badges indicating whether a staple is in a "Price Dip" (optimal buying window) or "Price Surge" (expected increase).
-- ⚡ **Fast REST API:** High-performance FastAPI backend delivering predictions in milliseconds.
-- 🎨 **Modern Responsive UI:** Clean, mobile-friendly interface styled with Tailwind CSS and Lucide React icons.
+- **Location Selector:** Interactive dropdowns to filter market data by Region and Province.
+- **Commodity Price Forecasts:** Interactive time-series charts powered by Chart.js displaying 7- to 30-day predicted retail prices.
+- **Smart Buying Alerts:** Color-coded badges indicating whether a staple is in a "Price Dip" (optimal buying window) or "Price Surge" (expected increase).
+- **Fast REST API:** High-performance FastAPI backend delivering predictions in milliseconds.
+- **Modern Responsive UI:** Clean, mobile-friendly interface styled with Tailwind CSS and Lucide React icons.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend (API & ML Engine)
 
@@ -69,7 +69,7 @@ Food price instability caused by seasonal weather patterns, transportation costs
 
 ---
 
-## 🏗️ System Architecture & Data Flow
+## System Architecture & Data Flow
 
 1. **User Request:** The user selects a location (*e.g., Region IV-A / Batangas*) and commodity (*e.g., Pork Belly*) on the React UI.
 2. **API Call:** Axios sends a request to FastAPI: `GET /api/v1/predict?region=4A&commodity=pork_belly`.
@@ -79,7 +79,7 @@ Food price instability caused by seasonal weather patterns, transportation costs
 
 ---
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```text
 mercado/                       <-- Root Repository Directory
@@ -106,7 +106,7 @@ mercado/                       <-- Root Repository Directory
 
 ---
 
-## 💻 Development Requirements
+## Development Requirements
 
 Before installing the project, make sure your computer has the following tools installed:
 
@@ -134,7 +134,7 @@ Before installing the project, make sure your computer has the following tools i
 
 ---
 
-## 🚀 Setup & Installation Guide
+## Setup & Installation Guide
 
 ### 1. Cloning the Repository
 
@@ -198,7 +198,7 @@ cd mercado
 
 ---
 
-## 🏃 Running the Project Locally
+## Running the Project Locally
 
 To run the full stack during local development, keep both terminal tabs active:
 
