@@ -19,3 +19,17 @@ frontend/dist/
 # Environment
 .env
 .env.local
+
+# Python / uv build artifacts & tools
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# OS and Editor specific files
+.zed/
+.vscode/
+.idea/
+Thumbs.db
