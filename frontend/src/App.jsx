@@ -15,9 +15,10 @@ import Layout from './components/Layout'
 function AppRouter() {
   const { route, nav, meta, metaError, loadMeta, t } = useApp()
   const [session, setSession] = useState(null)
-  const [checking, setChecking] = useState(true)
+  const [checking, setChecking] = useState(!!supabase)
 
   useEffect(() => {
+    if (!supabase) return
     let alive = true
     supabase.auth.getSession().then(({ data }) => {
       if (alive) {
