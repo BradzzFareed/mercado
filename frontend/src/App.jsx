@@ -12,13 +12,16 @@ import Pipeline from './pages/Pipeline'
 import Auth from './pages/Auth'
 import Layout from './components/Layout'
 
+// Dev-only escape hatch for design work without Supabase credentials.
+const DEV_BYPASS_AUTH = import.meta.env.VITE_DEV_BYPASS_AUTH === '1'
+
 function AppRouter() {
   const { route, nav, meta, metaError, loadMeta, t } = useApp()
-  const [session, setSession] = useState(null)
-  const [checking, setChecking] = useState(!!supabase)
+  const [session, setSession] = useState(DEV_BYPASS_AUTH ? { dev: true } : null)
+  const [checking, setChecking] = useState(!!supabase && !DEV_BYPASS_AUTH)
 
   useEffect(() => {
-    if (!supabase) return
+    if (!supabase || DEV_BYPASS_AUTH) return
     let alive = true
     supabase.auth.getSession().then(({ data }) => {
       if (alive) {
@@ -39,13 +42,14 @@ function AppRouter() {
   }, [])
 
   useEffect(() => {
-    if (checking) return
+    if (checking || DEV_BYPASS_AUTH) return
     if (!session && route.page !== 'auth') nav('auth')
     if (session && route.page === 'auth') nav('board')
   }, [checking, session, route.page, nav])
 
   if (checking) return <Training place="Mercado" />
-  if (!session || route.page === 'auth') return <Auth onLogin={() => nav('board')} />
+  if (!session) return <Auth onLogin={() => nav('board')} />
+  if (route.page === 'auth' && !DEV_BYPASS_AUTH) return <Auth onLogin={() => nav('board')} />
 
   let page = null
   if (meta) {

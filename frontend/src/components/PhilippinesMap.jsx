@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { peso, pct, changeColor } from '../util'
+import PinMarker from './Pinmarker'
 
-// Stylised island outlines (lon, lat). Rendered as a dot matrix, so exact coastlines do not matter.
+// Stylised island outlines (lon, lat)
 const ISLANDS = [
   [[120.6, 18.5], [121.3, 18.6], [121.9, 18.3], [122.3, 18.5], [122.4, 17.4], [122.2, 16.4], [121.6, 15.8], [121.5, 15.1], [121.6, 14.7], [122.0, 14.3], [121.9, 13.95], [122.5, 14.1], [122.75, 13.8], [122.4, 13.5], [122.7, 13.4], [123.3, 13.9], [123.9, 13.8], [124.1, 13.0], [124.05, 12.55], [123.7, 12.7], [123.3, 13.0], [123.0, 13.2], [122.6, 13.5], [122.0, 13.6], [121.6, 13.65], [121.0, 13.6], [120.6, 13.9], [120.5, 14.4], [120.1, 14.8], [119.95, 15.5], [120.0, 16.1], [120.3, 16.3], [120.45, 16.8], [120.35, 17.7], [120.55, 18.35]],
   [[120.35, 13.5], [121.0, 13.55], [121.5, 13.15], [121.55, 12.55], [121.1, 12.2], [120.7, 12.35], [120.4, 12.8]],
@@ -26,45 +27,100 @@ function inside(pt, poly) {
   return c
 }
 
+// Map percentage change directly to explicit hex colors
+function getPinColor(ch) {
+  if (ch > 0.001) return '#ef4444'   // Price increase / surge (Vibrant Red)
+  if (ch < -0.001) return '#10b981'  // Price decrease / dip (Vibrant Emerald Green)
+  return '#f59e0b'                   // Neutral / flat change (Amber Yellow)
+}
+
 export default function PhilippinesMap({ rows, horizon, selected, onSelect }) {
   const [hov, setHov] = useState(null)
   const W = 420, H = (W * (LAT1 - LAT0)) / (LON1 - LON0)
   const px = (lon) => ((lon - LON0) / (LON1 - LON0)) * W
   const py = (lat) => ((LAT1 - lat) / (LAT1 - LAT0)) * H
+
   const dots = useMemo(() => {
     const out = []
-    for (let lat = LAT0; lat < LAT1; lat += 0.14)
-      for (let lon = LON0; lon < LON1; lon += 0.14)
+    for (let lat = LAT0; lat < LAT1; lat += 0.1) {
+      for (let lon = LON0; lon < LON1; lon += 0.1) {
         if (ISLANDS.some((p) => inside([lon, lat], p))) out.push([px(lon), py(lat)])
+      }
+    }
+    rows.forEach((r) => {
+      out.push([px(r.lon), py(r.lat)])
+    })
     return out
-    // eslint-disable-next-line
-  }, [])
+  }, [rows])
+
   const cur = hov || rows.find((r) => r.province === selected)
+
   return (
     <div className="map-wrap">
-      <svg viewBox={`0 0 ${W} ${H}`} className="map" role="group" aria-label="Map of the Philippines with provinces coloured by expected price change">
-        {dots.map((d, i) => <circle key={i} cx={d[0]} cy={d[1]} r="1.15" className="map-dot" />)}
+      <svg viewBox={`0 0 ${W} ${H}`} className="map" role="group" aria-label="Map of the Philippines">
+        {dots.map((d, i) => (
+          <circle key={i} cx={d[0]} cy={d[1]} r="1.15" className="map-dot" />
+        ))}
+
         {rows.map((r) => {
           const ch = r.horizons[String(horizon)].change_pct
           const on = r.province === selected
+          const cx = px(r.lon)
+          const cy = py(r.lat)
+
+          // Get explicit hex color directly
+          const pinColor = getPinColor(ch)
+
           return (
-            <g key={r.province} className="map-node" onPointerEnter={() => setHov(r)} onPointerLeave={() => setHov(null)}
-              onClick={() => onSelect(r.province)} tabIndex={0} role="button" aria-label={`${r.name}: ${peso(r.price)}, ${pct(ch)}`}
-              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.province)}>
-              {on && <circle cx={px(r.lon)} cy={py(r.lat)} r="11" className="map-sel" />}
-              <circle cx={px(r.lon)} cy={py(r.lat)} r="14" fill="transparent" />
-              <circle cx={px(r.lon)} cy={py(r.lat)} r={on ? 6.5 : 5.2} fill={changeColor(ch)} className="map-bubble" />
+            <g
+              key={r.province}
+              className="map-node"
+              onPointerEnter={() => setHov(r)}
+              onPointerLeave={() => setHov(null)}
+              onClick={() => onSelect(r.province)}
+              tabIndex={0}
+              role="button"
+              aria-label={`${r.name}: ${peso(r.price)}, ${pct(ch)}`}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.province)}
+            >
+              <circle cx={cx} cy={cy - 12} r="14" fill="transparent" />
+
+              {on && (
+                <circle
+                  cx={cx}
+                  cy={cy - 15}
+                  r="14"
+                  className="map-sel"
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth="2"
+                />
+              )}
+
+              <PinMarker
+                x={cx}
+                y={cy}
+                fill={pinColor}
+                size={on ? 26 : 20}
+              />
             </g>
           )
         })}
       </svg>
+
       {cur && (
         <div className="map-card">
           <b>{cur.name}</b>
           <span>{cur.market}</span>
-          <div className="map-card-row"><strong>{peso(cur.price)}</strong><em style={{ color: 'var(--ink-2)' }}>{pct(cur.horizons[String(horizon)].change_pct)} in {horizon}d</em></div>
+          <div className="map-card-row">
+            <strong>{peso(cur.price)}</strong>
+            <em style={{ color: 'var(--ink-2)' }}>
+              {pct(cur.horizons[String(horizon)].change_pct)} in {horizon}d
+            </em>
+          </div>
         </div>
       )}
+
       <div className="map-legend" aria-hidden="true">
         <span>−5%</span><i /><span>+5%</span>
       </div>
