@@ -6,17 +6,18 @@
   --surge: #c9372a; --surge-bg: #fdeceb; --dip: #0b7a4b; --dip-bg: #e0f4ea; --flat: #56675d; --flat-bg: #e9eee7;
   --up: #d9503f; --down: #1e9a68;
   --shadow: 0 1px 2px rgba(15, 61, 46, 0.06), 0 8px 24px -12px rgba(15, 61, 46, 0.18);
+  --map-surface: #c9f5d928; --map-edge: #c9f5d94f;
   --r: 14px; --font: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif; --display: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) { --bg: #0b1712; --surface: #12241c; --surface-2: #0f1f18; --ink: #e8f0e9; --ink-2: #b4c4b9; --ink-3: #849489; --line: #234034;
     --leaf-line: #7ed9ae; --amber-line: #ffb52e; --band: rgba(255, 181, 46, 0.2);
-    --surge: #ff8a7a; --surge-bg: #3a1a17; --dip: #66d9a1; --dip-bg: #123326; --flat: #aab9af; --flat-bg: #1b2e25; --shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6); color-scheme: dark; }
+    --surge: #ff8a7a; --surge-bg: #3a1a17; --dip: #66d9a1; --dip-bg: #123326; --flat: #aab9af; --flat-bg: #1b2e25; --shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6); --map-surface: #12241c; --map-edge: #234034; color-scheme: dark; }
 }
 :root[data-theme='dark'] { --bg: #0b1712; --surface: #12241c; --surface-2: #0f1f18; --ink: #e8f0e9; --ink-2: #b4c4b9; --ink-3: #849489; --line: #234034;
   --leaf-line: #7ed9ae; --amber-line: #ffb52e; --band: rgba(255, 181, 46, 0.2);
-  --surge: #ff8a7a; --surge-bg: #3a1a17; --dip: #66d9a1; --dip-bg: #123326; --flat: #aab9af; --flat-bg: #1b2e25; --shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6); color-scheme: dark; }
+  --surge: #ff8a7a; --surge-bg: #3a1a17; --dip: #66d9a1; --dip-bg: #123326; --flat: #aab9af; --flat-bg: #1b2e25; --shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.6); --map-surface: #12241c; --map-edge: #234034; color-scheme: dark; }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
@@ -148,12 +149,12 @@ nav { display: grid; gap: 4px; }
 .pill.on { background: var(--leaf-2); color: #fff; border-color: transparent; }
 :root[data-theme='dark'] .pill.on { background: var(--mango); color: var(--mango-ink); }
 .map-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: start; }
-.map-panel { margin-bottom: 0; } .map-wrap { position: relative; display: grid; justify-items: center; } .map { width: min(100%, 480px); height: auto; }
+.map-panel { margin-bottom: 0; } .map-wrap { position: relative; display: grid; justify-items: center; background: var(--map-surface); border: 1px solid var(--map-edge); border-radius: 14px; padding: 12px; } .map { width: min(100%, 480px); height: auto; }
 .map-dot { fill: var(--ink-3); opacity: 0.35; } .map-bubble { stroke: var(--surface); stroke-width: 1.6; } .map-node { cursor: pointer; outline: none; } .map-node:focus-visible .map-bubble { stroke: var(--mango); stroke-width: 3; }
 .map-sel { fill: none; stroke: var(--ink); stroke-width: 1.6; stroke-dasharray: 2 2; }
 .map-card { position: absolute; left: 0; top: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: grid; box-shadow: var(--shadow); max-width: 230px; font-size: 0.88rem; }
 .map-card span { color: var(--ink-3); font-size: 0.78rem; } .map-card-row { display: flex; gap: 10px; align-items: baseline; margin-top: 4px; } .map-card strong { font: 800 1.4rem var(--display); }
-.map-legend { position: static; justify-content: flex-end; margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--ink-3); }
+.map-legend { position: static; justify-content: flex-end; margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--ink-2); }
 .map-legend i { width: 110px; height: 8px; border-radius: 6px; background: linear-gradient(90deg, #0f8f5b, #d9dfda, #d93f2e); }
 .rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; } .rank button { width: 100%; display: flex; justify-content: space-between; align-items: center; background: none; border: 0; padding: 8px 6px; border-radius: 8px; text-align: left; } .rank button:hover { background: var(--surface-2); }
 .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; }
