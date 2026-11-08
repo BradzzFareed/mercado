@@ -35,7 +35,7 @@ export default function Board() {
   }
 
   if (error) return <ErrorBox error={error} retry={reload} />
-  if (loading || !data) return <Training place={prov ? prov.name : ''} />
+  if (loading || !data) return <Training />
 
   const key = String(horizon)
   const surges = data.items.filter((i) => i.horizons[key].signal === 'surge')

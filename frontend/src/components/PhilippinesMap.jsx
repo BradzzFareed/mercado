@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { peso, pct, changeColor } from '../util'
+import { peso, pct } from '../util'
 import PinMarker from './Pinmarker'
 
 // Stylised island outlines (lon, lat)
@@ -17,6 +17,10 @@ const ISLANDS = [
   [[122.05, 7.0], [122.3, 7.9], [123.0, 8.3], [123.4, 8.7], [123.9, 8.55], [124.6, 8.5], [125.2, 9.2], [125.6, 9.8], [126.2, 9.2], [126.4, 8.3], [126.1, 7.4], [126.5, 6.8], [126.2, 6.3], [125.7, 6.0], [125.45, 5.8], [125.1, 6.1], [124.6, 6.1], [124.2, 6.5], [123.9, 7.2], [123.4, 7.8], [122.8, 7.5]],
 ]
 const LON0 = 116.8, LON1 = 126.9, LAT0 = 4.9, LAT1 = 19.0
+const W = 420
+const H = (W * (LAT1 - LAT0)) / (LON1 - LON0)
+const px = (lon) => ((lon - LON0) / (LON1 - LON0)) * W
+const py = (lat) => ((LAT1 - lat) / (LAT1 - LAT0)) * H
 
 function inside(pt, poly) {
   let c = false
@@ -36,9 +40,6 @@ function getPinColor(ch) {
 
 export default function PhilippinesMap({ rows, horizon, selected, onSelect }) {
   const [hov, setHov] = useState(null)
-  const W = 420, H = (W * (LAT1 - LAT0)) / (LON1 - LON0)
-  const px = (lon) => ((lon - LON0) / (LON1 - LON0)) * W
-  const py = (lat) => ((LAT1 - lat) / (LAT1 - LAT0)) * H
 
   const dots = useMemo(() => {
     const out = []

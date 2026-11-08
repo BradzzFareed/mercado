@@ -1,5 +1,3 @@
-import React from 'react'
-
 export default function PinMarker({ x, y, fill = '#10b981', size = 22 }) {
   const scale = size / 24
 

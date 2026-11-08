@@ -32,7 +32,7 @@ const STEPS = [
   'Almost ready to roll'
 ]
 
-export function Training({ place }) {
+export function Training() {
   const [n, setN] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setN((x) => Math.min(x + 1, STEPS.length - 1)), 900)

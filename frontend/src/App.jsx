@@ -47,7 +47,7 @@ function AppRouter() {
     if (session && route.page === 'auth') nav('board')
   }, [checking, session, route.page, nav])
 
-  if (checking) return <Training place="Mercado" />
+  if (checking) return <Training />
   if (!session) return <Auth onLogin={() => nav('board')} />
   if (route.page === 'auth' && !DEV_BYPASS_AUTH) return <Auth onLogin={() => nav('board')} />
 

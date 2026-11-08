@@ -12,7 +12,7 @@ function scenarioPct(c, d, typhoon, fuel) {
 }
 
 export default function WhatIf() {
-  const { province, prov, horizon, t, commodityBy, dataVersion } = useApp()
+  const { province, horizon, t, commodityBy, dataVersion } = useApp()
   const { data, error, loading, reload } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
   const [typhoon, setTyphoon] = useState(0)    // 0..1
   const [fuel, setFuel] = useState(0)          // percent, -20..60
@@ -28,7 +28,7 @@ export default function WhatIf() {
     })
   }, [data, commodityBy, horizon, typhoon, fuel])
   if (error) return <ErrorBox error={error} retry={reload} />
-  if (loading || !data) return <Training place={prov ? prov.name : ''} />
+  if (loading || !data) return <Training />
 
   const w = (id) => commodityBy[id].basket
   const baseBasket = rows.reduce((s, r) => s + w(r.c.id) * r.base.price, 0)

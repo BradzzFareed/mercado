@@ -22,7 +22,7 @@ export default function Planner() {
 
   const byC = useMemo(() => (data ? Object.fromEntries(data.items.map((i) => [i.commodity, i])) : {}), [data])
   if (error) return <ErrorBox error={error} retry={reload} />
-  if (loading || !data) return <Training place={prov ? prov.name : ''} />
+  if (loading || !data) return <Training />
   const key = String(horizon)
 
   const dishes = meta.dishes.map((d) => {
