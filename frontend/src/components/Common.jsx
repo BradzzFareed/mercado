@@ -25,24 +25,34 @@ export function HorizonToggle() {
   )
 }
 
-const STEPS = ['Holt-Winters seasonal model', 'Ridge regression on price momentum', 'Gradient-boosted trees', 'Back-testing on past weeks', 'Blending into one forecast']
+const STEPS = [
+  'Consulting the agricultural crystal ball',
+  'Crunching the latest market digits',
+  'Polishing up the price predictions',
+  'Almost ready to roll'
+]
+
 export function Training({ place }) {
-  const { t } = useApp()
   const [n, setN] = useState(0)
   useEffect(() => {
-    const id = setInterval(() => setN((x) => Math.min(x + 1, STEPS.length - 1)), 1100)
+    const id = setInterval(() => setN((x) => Math.min(x + 1, STEPS.length - 1)), 900)
     return () => clearInterval(id)
   }, [])
   return (
     <div className="training" role="status" aria-live="polite">
       <div className="training-orb" aria-hidden="true"><i /><i /><i /></div>
-      <h2>{t('train.title', { place })}</h2>
+      
+      {/* Header */}
+      <h2>Brewing up your fresh market insights...</h2>
+      
       <ol>
         {STEPS.map((s, i) => (
-          <li key={s} className={i < n ? 'done' : i === n ? 'now' : ''}><span aria-hidden="true">{i < n ? '✓' : i === n ? '…' : ''}</span>{s}</li>
+          <li key={s} className={i < n ? 'done' : i === n ? 'now' : ''}>
+            <span aria-hidden="true">{i < n ? '' : i === n ? '' : ''}</span>{s}
+          </li>
         ))}
       </ol>
-      <p>The first load of a market takes a few seconds. After that it is instant.</p>
+      <p>Good things take a second. Hang tight!</p>
     </div>
   )
 }

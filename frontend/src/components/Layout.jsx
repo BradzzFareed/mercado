@@ -96,7 +96,7 @@ export default function Layout({ children }) {
 
       <nav className={`side-drawer ${isMenuOpen ? 'open' : ''}`}>
         <div className="drawer-header">
-          <div className="header-brand" onClick={() => { setIsMenuOpen(false); nav('board'); }}><Logo size={32} /> mercado</div>
+          <div className="header-brand" onClick={() => { setIsMenuOpen(false); nav('board'); }}><Logo size={32} /> Mercado</div>
           <button className="hamburger-btn" onClick={() => setIsMenuOpen(false)}><X size={22} /></button>
         </div>
         
