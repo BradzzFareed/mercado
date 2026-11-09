@@ -43,7 +43,7 @@ export function Training() {
       <div className="training-orb" aria-hidden="true"><i /><i /><i /></div>
       
       {/* Header */}
-      <h1>Brewing up your fresh market insights...</h1>
+      <h1>Brewing up your fresh market insights…</h1>
       
       <ol>
         {STEPS.map((s, i) => (
