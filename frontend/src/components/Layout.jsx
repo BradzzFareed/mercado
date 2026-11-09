@@ -10,12 +10,16 @@ const NAV = [
   ['board', 'nav.board', IconBoard], ['map', 'nav.map', IconMap], ['planner', 'nav.planner', IconPlan],
   ['whatif', 'nav.whatif', IconWhat], ['lab', 'nav.lab', IconLab], ['pipeline', 'nav.pipeline', IconPipe],
 ]
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export default function Layout({ children }) {
   const { nav, route, t, lang, setLang, theme, setTheme, province, horizon, commodityBy, dataVersion } = useApp()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [jumpToAlerts, setJumpToAlerts] = useState(false)
   const mainRef = useRef(null)
+  const drawerRef = useRef(null)
+  const hamburgerRef = useRef(null)
+  const wasOpen = useRef(false)
 
   // Shared with Board through api.js' per-path promise cache.
   const { data: overview } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
@@ -57,10 +61,39 @@ export default function Layout({ children }) {
     nav('auth')
   }
 
-  // Escape closes the drawer, matching the overlay and the X button.
+  // Move focus into the drawer while open, then back to the hamburger on close.
+  useEffect(() => {
+    if (isMenuOpen) {
+      wasOpen.current = true
+      drawerRef.current?.querySelector('.drawer-header .hamburger-btn')?.focus()
+    } else if (wasOpen.current) {
+      wasOpen.current = false
+      if (hamburgerRef.current?.isConnected) hamburgerRef.current.focus()
+    }
+  }, [isMenuOpen])
+
+  // Escape closes the drawer; Tab and Shift+Tab stay inside it while open.
   useEffect(() => {
     if (!isMenuOpen) return
-    const onKey = (e) => { if (e.key === 'Escape') setIsMenuOpen(false) }
+    const onKey = (e) => {
+      if (e.key === 'Escape') { setIsMenuOpen(false); return }
+      if (e.key !== 'Tab') return
+      const drawer = drawerRef.current
+      if (!drawer) return
+      const nodes = drawer.querySelectorAll(FOCUSABLE)
+      if (!nodes.length) return
+      const first = nodes[0]
+      const last = nodes[nodes.length - 1]
+      const active = document.activeElement
+      const inside = drawer.contains(active)
+      if (e.shiftKey && (!inside || active === first)) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (!inside || active === last)) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [isMenuOpen])
@@ -158,7 +191,7 @@ export default function Layout({ children }) {
 
       <div className={`menu-overlay ${isMenuOpen ? 'open' : ''}`} onClick={closeMenu} aria-hidden="true" />
 
-      <nav id="side-drawer" className={`side-drawer ${isMenuOpen ? 'open' : ''}`} aria-label={t('menu.label')} inert={!isMenuOpen}>
+      <nav id="side-drawer" ref={drawerRef} className={`side-drawer ${isMenuOpen ? 'open' : ''}`} aria-label={t('menu.label')} inert={!isMenuOpen}>
         <div className="drawer-header">
           <button className="header-brand" onClick={goBoard}><Logo size={32} /> Mercado</button>
           <button className="hamburger-btn" onClick={closeMenu} aria-label={t('menu.close')}><X size={22} /></button>
@@ -186,7 +219,7 @@ export default function Layout({ children }) {
 
       <header className="board-header-nav">
         <div className="header-left">
-          <button className="hamburger-btn" onClick={() => setIsMenuOpen((open) => !open)} aria-label={t('menu.open')} aria-expanded={isMenuOpen} aria-controls="side-drawer"><Menu size={22} /></button>
+          <button ref={hamburgerRef} className="hamburger-btn" onClick={() => setIsMenuOpen((open) => !open)} aria-label={t('menu.open')} aria-expanded={isMenuOpen} aria-controls="side-drawer"><Menu size={22} /></button>
           <button className="header-brand" onClick={goBoard}><Logo size={36} /> mercado</button>
         </div>
         <div className="header-actions">
