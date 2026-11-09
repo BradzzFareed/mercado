@@ -27,6 +27,7 @@ export default function Board() {
     <div className="board-page-wrapper">
       <style>{`
         .board-page-wrapper .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+        #board-alerts { scroll-margin-top: 6rem; }
         .board-page-wrapper .kpi {
           background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 16px; padding: 1.75rem; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
@@ -87,7 +88,7 @@ export default function Board() {
 
       <p className="asof">{t('board.asof', { date: fmtDate(data.as_of, { month: 'long', day: 'numeric', year: 'numeric' }) })}</p>
 
-      <section className="panel">
+      <section className="panel" id="board-alerts" tabIndex={-1}>
         <h2>{t('alerts.title')}</h2>
         {alerts.length === 0 ? <p className="muted">{t('alerts.none')}</p> : (
           <ul className="alerts">
