@@ -80,7 +80,8 @@ const fil = {
   'adv.stock': 'Mag-imbak na', 'adv.wait': 'Maghintay, bababa', 'adv.asneeded': 'Bumili kung kailangan', 'adv.swap': 'Tataas, bumili ng kaunti', 'adv.fresh': 'Bumili ng sariwa',
   'wi.title': 'Paano kung…', 'wi.typhoon': 'Bagyo sa inyong lugar', 'wi.fuel': 'Pagbabago sa presyo ng gasolina', 'wi.reset': 'I-reset',
   'pipe.title': 'Daloy ng datos', 'pipe.run': 'Patakbuhin ngayon', 'pipe.sim': 'Mag-simulate ng bagong linggo',
-  'common.loading': 'Naglo-load…', 'lang': 'English', 'common.perkg': '/kilo', 'common.perdz': '/dosena',
+  'common.loading': 'Naglo-load…', 'common.error': 'May naging problema', 'common.retry': 'Subukan muli',
+  'common.sample': 'Halimbawang datos', 'lang': 'English', 'theme': 'Tema', 'common.perkg': '/kilo', 'common.perdz': '/dosena',
   'logout': 'Mag-logout', 'menu.open': 'Buksan ang menu', 'menu.close': 'Isara ang menu', 'menu.label': 'Pangunahing menu', 'skip': 'Lumaktaw sa nilalaman',
 }
 export const DICT = { en, fil }
