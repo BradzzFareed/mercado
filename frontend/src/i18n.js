@@ -52,6 +52,7 @@ const en = {
   'lab.how': 'How the forecasts are made', 'lab.sample': 'This demo runs on synthetic sample data, so these scores show the method works, not how it would score on live market prices.',
   'common.loading': 'Loading…', 'common.error': 'Something went wrong', 'common.retry': 'Try again', 'common.perkg': '/kg', 'common.perdz': '/dozen',
   'common.sample': 'Sample data', 'lang': 'Filipino', 'theme': 'Theme', 'train.title': 'Training models for {place}',
+  'logout': 'Logout', 'menu.open': 'Open menu', 'menu.close': 'Close menu', 'menu.label': 'Main menu', 'skip': 'Skip to content',
 }
 const fil = {
   'nav.board': 'Presyuhan', 'nav.map': 'Mapa ng presyo', 'nav.planner': 'Planner ng karinderya', 'nav.whatif': 'Paano kung…', 'nav.lab': 'Model lab', 'nav.pipeline': 'Daloy ng datos',
@@ -78,6 +79,7 @@ const fil = {
   'wi.title': 'Paano kung…', 'wi.typhoon': 'Bagyo sa inyong lugar', 'wi.fuel': 'Pagbabago sa presyo ng gasolina', 'wi.reset': 'I-reset',
   'pipe.title': 'Daloy ng datos', 'pipe.run': 'Patakbuhin ngayon', 'pipe.sim': 'Mag-simulate ng bagong linggo',
   'common.loading': 'Naglo-load…', 'lang': 'English', 'common.perkg': '/kilo', 'common.perdz': '/dosena',
+  'logout': 'Mag-logout', 'menu.open': 'Buksan ang menu', 'menu.close': 'Isara ang menu', 'menu.label': 'Pangunahing menu', 'skip': 'Lumaktaw sa nilalaman',
 }
 export const DICT = { en, fil }
 export function translate(lang, key, vars) {
