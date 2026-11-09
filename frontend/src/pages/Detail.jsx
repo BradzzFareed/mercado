@@ -14,7 +14,7 @@ export default function Detail({ id }) {
   const cmp = useApi(c ? `/api/v1/compare?province=${province}&commodity=${id}` : null, [dataVersion])
   if (!c) return <ErrorBox error={`Unknown commodity "${id}"`} />
   if (error) return <ErrorBox error={error} retry={reload} />
-  if (loading || !d) return <Training place={`${c.short} · ${prov.name}`} />
+  if (loading || !d) return <Training />
 
   const key = String(horizon)
   const hz = d.horizons[key]

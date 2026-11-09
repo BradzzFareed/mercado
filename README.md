@@ -63,7 +63,7 @@ Food price instability caused by seasonal weather patterns, transportation costs
 - **Database:** SQLite through the standard-library `sqlite3` module
 - **Testing:** pytest with `fastapi.testclient`
 
-> SQLAlchemy and XGBoost are declared dependencies for a planned data-layer/model swap; the live forecast engine still uses `sqlite3` and scikit-learn.
+> SQLAlchemy, XGBoost, and joblib are declared dependencies but are not imported yet. SQLAlchemy and XGBoost are planned for the data-layer and model work; the live forecast engine still uses `sqlite3` and scikit-learn.
 
 ### Frontend (User Interface)
 
@@ -90,7 +90,7 @@ Food price instability caused by seasonal weather patterns, transportation costs
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| GET | `/api/v1/health` | Row count and data range |
+| GET | `/api/v1/health` | Row count and latest data date |
 | GET | `/api/v1/meta` | Provinces, regions, commodities, dishes, horizons, dataset info |
 | GET | `/api/v1/overview?province=` | Price board: per-commodity summaries and basket |
 | GET | `/api/v1/forecast?province=&commodity=` | Full detail: history, forecast, drivers, seasonality, back-test |
@@ -114,11 +114,9 @@ mercado/
 │   ├── pyproject.toml         <-- Dependencies managed by uv
 │   ├── uv.lock
 │   ├── mercado/               <-- Forecast engine and data pipeline
-│   │   ├── catalog.py         <-- Static commodity/market/scenario reference data
 │   │   ├── commodities.py     <-- Commodity metadata and shock sensitivities
 │   │   ├── geo.py             <-- Regions, provinces, market coordinates
 │   │   ├── sample_data.py     <-- Deterministic synthetic history generator
-│   │   ├── simulate.py        <-- Writes sample CSV exports
 │   │   ├── models.py          <-- Naive, Holt-Winters, Ridge, gradient-boosted trees
 │   │   ├── forecast.py        <-- Caching, signals, drivers, bulk views
 │   │   ├── pipeline.py        <-- fetch -> clean -> store (live, wfp, inbox, da, simulate, seed)
@@ -154,7 +152,7 @@ mercado/
 ## Development Requirements
 
 1. **Git** (v2.30+)
-2. **Node.js** (v18+; v24 recommended)
+2. **Node.js** (20.19+ or 22.12+; v24 recommended)
 3. **pnpm**: `npm install -g pnpm`
 4. **Python** 3.14+
 5. **uv**:
@@ -245,6 +243,7 @@ pnpm build
 | `VITE_API_BASE` | Backend origin. Leave empty in dev to use the Vite proxy. |
 | `VITE_SUPABASE_URL` | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
+| `VITE_DEV_BYPASS_AUTH` | Set to `1` to skip the login gate for UI work without Supabase credentials. Never enable in production. |
 
 ---
 
@@ -252,7 +251,7 @@ pnpm build
 
 - **Port 8000 in use:** Stop other uvicorn/Python processes.
 - **Frontend cannot reach the backend:** Ensure `uv run uvicorn main:app --reload` is running and `VITE_API_BASE` is empty in dev (so the proxy is used).
-- **Login screen errors:** Confirm `frontend/.env` exists and contains valid Supabase values.
+- **Login screen errors:** Confirm `frontend/.env` exists and contains valid Supabase values. For UI work without credentials, set `VITE_DEV_BYPASS_AUTH=1` in `frontend/.env`.
 - **Blank page or "Something went wrong":** The API is not running, or the database is still seeding. Check `http://127.0.0.1:8000/api/v1/health`.
 - **Reset everything:** Delete `backend/data/mercado.db` and restart; it re-seeds itself.
 - **Missing Python package:** Always run through `uv run` (e.g., `uv run uvicorn main:app --reload`).

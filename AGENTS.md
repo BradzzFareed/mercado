@@ -9,7 +9,7 @@ Run commands from the relevant app directory, not the repo root.
 Backend (from `backend/`):
 - `uv sync` — install deps into `backend/.venv`
 - `uv run uvicorn main:app --reload` — dev server on http://127.0.0.1:8000 (docs at `/docs`)
-- `uv run pytest -q` — test suite (`tests/test_mercado.py`)
+- `uv run pytest -q` — 6 tests in `tests/test_mercado.py`, about 60–100 s (forecast warm-up dominates)
 - Always go through `uv run`; do not rely on a globally installed Python env.
 
 Frontend (from `frontend/`):
@@ -22,19 +22,18 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
 
 ## Layout and gotchas
 
-- The FastAPI app is `backend/main.py` (`app` object), not `backend/src/backend/`.
-  That package is an unused `uv_build` stub; its `backend` console script only
-  prints "Hello from backend!" and does not start the API.
+- The FastAPI app is `backend/main.py` (`app` object). The backend is an application,
+  not a package: there is no `src/` tree, no console script, and no build backend, so
+  `uv sync` installs dependencies only.
 - Backend requires Python **3.14+** (`pyproject.toml`, `backend/.python-version`).
 - `backend/mercado/` is the live forecast engine: `store.py` (SQLite),
   `models.py`/`forecast.py` (Holt-Winters + Ridge + gradient-boosted trees),
   `pipeline.py` (live/wfp/inbox/da/simulate/seed), `scheduler.py`, and static
-  reference data (`geo.py`, `commodities.py`, `catalog.py`, `sample_data.py`).
-- `backend/mercado/engine.py` and `insights.py` were intentionally **not**
-  migrated: they are an incomplete rewrite (missing `store.Dataset`/`Panel`)
-  and nothing imports them.
-- SQLAlchemy and XGBoost are declared dependencies but not yet used; the store
-  is still stdlib `sqlite3` and the models are still scikit-learn.
+  reference data (`geo.py`, `commodities.py`, `sample_data.py`). The `simulate` mode
+  appends one week via `sample_data.next_week_rows()`; there is no separate simulator module.
+- SQLAlchemy, XGBoost, and joblib are declared in `pyproject.toml` but not imported
+  anywhere. The store is still stdlib `sqlite3`, and the `gbm` model is scikit-learn's
+  `GradientBoostingRegressor`.
 - `backend/data/mercado.db` is generated at runtime and gitignored. Delete it to
   force a re-seed from `sample_data.generate()`.
 - Tailwind is v4 through `@tailwindcss/vite`. `src/index.css` holds
@@ -44,7 +43,12 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   Chart.js via `react-chartjs-2`. `Sparkline` and `PhilippinesMap` remain
   hand-rolled SVG.
 - Auth uses Supabase. `src/supabaseClient.js` reads `VITE_SUPABASE_URL` and
-  `VITE_SUPABASE_ANON_KEY`; copy `frontend/.env.example` to `frontend/.env`.
+  `VITE_SUPABASE_ANON_KEY`; copy `frontend/.env.example` to `frontend/.env`. Without
+  those values it logs a warning and exports `supabase = null` (it does not throw).
+  For UI work without credentials, set `VITE_DEV_BYPASS_AUTH=1`.
+- `components/Layout.jsx` is the only app shell (header, drawer, nav, language and
+  theme toggles, logout). Pages render content only; do not add a header, drawer, or
+  full-page background inside a page.
 - Routing is a hand-rolled hash router in `src/state.jsx` (`#/board`,
   `#/commodity/<id>`, `#/map`, ...). `App.jsx` adds a Supabase session guard.
 
@@ -56,13 +60,15 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   backend origin.
 - Backend CORS allows `http://localhost:5173` and `http://127.0.0.1:5173`.
   If the Vite port changes, update both sides.
-- `frontend/src/api.js` is an axios wrapper with an in-memory cache; it surfaces
-  backend `{error}` bodies (and FastAPI `{detail}`) as `Error.message`.
+- `frontend/src/api.js` is an axios wrapper that surfaces backend `{error}` bodies
+  (and FastAPI `{detail}`) as `Error.message`. It caches GET promises per path for the
+  page session. After a pipeline run that does not come from the Pipeline page, call
+  `clearCache()` or fetch with `{fresh: true}`, or the UI stays stale.
 
 ## Environment
 
-- Dev tools are native Linux installs: `uv` in `~/.local/bin`, and
-  `node`/`npm`/`pnpm` in `/usr/bin` (Node 24, pnpm 10).
+- `uv` is in `~/.local/bin`. Use whatever `node` and `pnpm` are on PATH; this checkout
+  was last verified on Node 26 and pnpm 12. Vite requires Node `^20.19 || >=22.12`.
 - The checkout lives on the Windows drive (`/mnt/c/...`), so `uv` warns about
   hardlinks across filesystems. It is harmless; set `UV_LINK_MODE=copy` to
   silence it.
