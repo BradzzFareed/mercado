@@ -32,7 +32,7 @@ export default function Board() {
           background: var(--surface); border: 1px solid var(--line);
           border-radius: 16px; padding: 1.75rem; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
         }
-        .board-page-wrapper .kpi-basket { background: var(--leaf); color: #eaf4ee; border-color: transparent; }
+        .board-page-wrapper .kpi-basket { background: var(--basket-bg); color: var(--basket-ink); border-color: transparent; }
         .board-page-wrapper .kpi:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 15px 30px rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4); }
 
         .board-page-wrapper .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
