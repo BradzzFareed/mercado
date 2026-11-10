@@ -141,7 +141,7 @@ export default function Layout({ children }) {
         }
         .skip-link:focus { top: 1rem; }
 
-        .board-header-nav {
+        .app-header {
           display: flex; align-items: center; justify-content: space-between;
           padding: 1.25rem 3rem; background: ${bgHeader};
           backdrop-filter: blur(20px); border-bottom: 1px solid ${borderSubtle};
@@ -178,7 +178,7 @@ export default function Layout({ children }) {
         .page-content-wrapper { padding: 2.5rem 3rem; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; position: relative; z-index: 1; }
 
         @media (prefers-reduced-motion: reduce) {
-          .app-global-wrapper, .board-header-nav, .side-drawer, .menu-overlay, .skip-link,
+          .app-global-wrapper, .app-header, .side-drawer, .menu-overlay, .skip-link,
           .hamburger-btn, .header-brand, .icon-btn, .drawer-nav-item, .footer-action { transition: none; }
         }
       `}</style>
@@ -217,7 +217,7 @@ export default function Layout({ children }) {
         </div>
       </nav>
 
-      <header className="board-header-nav">
+      <header className="app-header">
         <div className="header-left">
           <button ref={hamburgerRef} className="hamburger-btn" onClick={() => setIsMenuOpen((open) => !open)} aria-label={t('menu.open')} aria-expanded={isMenuOpen} aria-controls="side-drawer"><Menu size={22} /></button>
           <button className="header-brand" onClick={goBoard}><Logo size={36} /> Mercado</button>
