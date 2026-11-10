@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useApp } from '../state'
 import { peso, pct } from '../util'
 import PinMarker from './Pinmarker'
 
@@ -31,14 +32,19 @@ function inside(pt, poly) {
   return c
 }
 
+const PIN_RISE = '#ef4444'  // Price increase / surge (Vibrant Red)
+const PIN_FALL = '#10b981'  // Price decrease / dip (Vibrant Emerald Green)
+const PIN_FLAT = '#f59e0b'  // Neutral / flat change (Amber Yellow)
+
 // Map percentage change directly to explicit hex colors
 function getPinColor(ch) {
-  if (ch > 0.001) return '#ef4444'   // Price increase / surge (Vibrant Red)
-  if (ch < -0.001) return '#10b981'  // Price decrease / dip (Vibrant Emerald Green)
-  return '#f59e0b'                   // Neutral / flat change (Amber Yellow)
+  if (ch > 0.001) return PIN_RISE
+  if (ch < -0.001) return PIN_FALL
+  return PIN_FLAT
 }
 
 export default function PhilippinesMap({ rows, horizon, selected, onSelect }) {
+  const { t } = useApp()
   const [hov, setHov] = useState(null)
 
   const dots = useMemo(() => {
@@ -122,8 +128,10 @@ export default function PhilippinesMap({ rows, horizon, selected, onSelect }) {
         </div>
       )}
 
-      <div className="map-legend" aria-hidden="true">
-        <span>−5%</span><i /><span>+5%</span>
+      <div className="map-legend">
+        <span><i style={{ background: PIN_FALL }} />{t('map.legend.fall')}</span>
+        <span><i style={{ background: PIN_FLAT }} />{t('map.legend.flat')}</span>
+        <span><i style={{ background: PIN_RISE }} />{t('map.legend.rise')}</span>
       </div>
     </div>
   )

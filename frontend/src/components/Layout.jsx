@@ -1,25 +1,59 @@
-import { useEffect, useRef, useState } from 'react'
-import { useApp } from '../state'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useApp, useApi } from '../state'
 import LocationPicker from './LocationPicker'
 import { Logo, IconBoard, IconMap, IconPlan, IconWhat, IconLab, IconPipe, IconSun, IconMoon } from './Icons'
-import { LogOut, Menu, X, Globe } from 'lucide-react'
+import { LogOut, Bell, Menu, X, Globe } from 'lucide-react'
+import { buildAlerts } from '../alerts'
 import { supabase } from '../supabaseClient'
 
 const NAV = [
   ['board', 'nav.board', IconBoard], ['map', 'nav.map', IconMap], ['planner', 'nav.planner', IconPlan],
   ['whatif', 'nav.whatif', IconWhat], ['lab', 'nav.lab', IconLab], ['pipeline', 'nav.pipeline', IconPipe],
 ]
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export default function Layout({ children }) {
-  const { nav, route, t, lang, setLang, theme, setTheme } = useApp()
+  const { nav, route, t, lang, setLang, theme, setTheme, province, horizon, commodityBy, dataVersion } = useApp()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [jumpToAlerts, setJumpToAlerts] = useState(false)
   const mainRef = useRef(null)
+  const drawerRef = useRef(null)
+  const hamburgerRef = useRef(null)
+  const wasOpen = useRef(false)
+
+  // Shared with Board through api.js' per-path promise cache.
+  const { data: overview } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
+  const alerts = useMemo(
+    () => (overview && Object.keys(commodityBy).length ? buildAlerts(overview.items, commodityBy, horizon, t) : []),
+    [overview, commodityBy, horizon, t],
+  )
 
   const dark = theme ? theme === 'dark' : typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
   const active = route?.page === 'commodity' ? 'board' : route?.page
 
   const closeMenu = () => setIsMenuOpen(false)
   const goBoard = () => { closeMenu(); nav('board') }
+  const goAlerts = () => { closeMenu(); setJumpToAlerts(true); nav('board') }
+
+  // Jump to the Board alerts panel without putting "#alerts" in the hash route.
+  useEffect(() => {
+    if (!jumpToAlerts || route.page !== 'board') return
+    let frame = 0
+    let raf
+    const focus = () => {
+      const el = document.getElementById('board-alerts')
+      if (!el) {
+        if (frame++ < 12) raf = requestAnimationFrame(focus)
+        return
+      }
+      setJumpToAlerts(false)
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      el.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' })
+      el.focus({ preventScroll: true })
+    }
+    raf = requestAnimationFrame(focus)
+    return () => cancelAnimationFrame(raf)
+  }, [jumpToAlerts, route.page, overview])
 
   const handleLogout = async () => {
     closeMenu()
@@ -27,10 +61,39 @@ export default function Layout({ children }) {
     nav('auth')
   }
 
-  // Escape closes the drawer, matching the overlay and the X button.
+  // Move focus into the drawer while open, then back to the hamburger on close.
+  useEffect(() => {
+    if (isMenuOpen) {
+      wasOpen.current = true
+      drawerRef.current?.querySelector('.drawer-header .hamburger-btn')?.focus()
+    } else if (wasOpen.current) {
+      wasOpen.current = false
+      if (hamburgerRef.current?.isConnected) hamburgerRef.current.focus()
+    }
+  }, [isMenuOpen])
+
+  // Escape closes the drawer; Tab and Shift+Tab stay inside it while open.
   useEffect(() => {
     if (!isMenuOpen) return
-    const onKey = (e) => { if (e.key === 'Escape') setIsMenuOpen(false) }
+    const onKey = (e) => {
+      if (e.key === 'Escape') { setIsMenuOpen(false); return }
+      if (e.key !== 'Tab') return
+      const drawer = drawerRef.current
+      if (!drawer) return
+      const nodes = drawer.querySelectorAll(FOCUSABLE)
+      if (!nodes.length) return
+      const first = nodes[0]
+      const last = nodes[nodes.length - 1]
+      const active = document.activeElement
+      const inside = drawer.contains(active)
+      if (e.shiftKey && (!inside || active === first)) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && (!inside || active === last)) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [isMenuOpen])
@@ -78,7 +141,7 @@ export default function Layout({ children }) {
         }
         .skip-link:focus { top: 1rem; }
 
-        .board-header-nav {
+        .app-header {
           display: flex; align-items: center; justify-content: space-between;
           padding: 1.25rem 3rem; background: ${bgHeader};
           backdrop-filter: blur(20px); border-bottom: 1px solid ${borderSubtle};
@@ -90,8 +153,9 @@ export default function Layout({ children }) {
         .header-brand { display: flex; align-items: center; gap: 0.75rem; font-size: 1.5rem; font-weight: 700; color: ${textMain}; cursor: pointer; background: none; border: 0; padding: 0; font-family: inherit; transition: color 0.2s; }
         .header-brand:hover { color: #10b981; }
         
-        .icon-btn { background: ${hoverBg}; border: 1px solid ${borderSubtle}; color: ${textMuted}; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
+        .icon-btn { background: ${hoverBg}; border: 1px solid ${borderSubtle}; color: ${textMuted}; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
         .icon-btn:hover { background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
+        .alert-badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px; background: #dc2626; color: #fff; font-size: 0.68rem; font-weight: 700; line-height: 18px; text-align: center; box-sizing: border-box; }
         
         .menu-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
         .menu-overlay.open { opacity: 1; pointer-events: auto; }
@@ -114,7 +178,7 @@ export default function Layout({ children }) {
         .page-content-wrapper { padding: 2.5rem 3rem; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; position: relative; z-index: 1; }
 
         @media (prefers-reduced-motion: reduce) {
-          .app-global-wrapper, .board-header-nav, .side-drawer, .menu-overlay, .skip-link,
+          .app-global-wrapper, .app-header, .side-drawer, .menu-overlay, .skip-link,
           .hamburger-btn, .header-brand, .icon-btn, .drawer-nav-item, .footer-action { transition: none; }
         }
       `}</style>
@@ -127,7 +191,7 @@ export default function Layout({ children }) {
 
       <div className={`menu-overlay ${isMenuOpen ? 'open' : ''}`} onClick={closeMenu} aria-hidden="true" />
 
-      <nav id="side-drawer" className={`side-drawer ${isMenuOpen ? 'open' : ''}`} aria-label={t('menu.label')} inert={!isMenuOpen}>
+      <nav id="side-drawer" ref={drawerRef} className={`side-drawer ${isMenuOpen ? 'open' : ''}`} aria-label={t('menu.label')} inert={!isMenuOpen}>
         <div className="drawer-header">
           <button className="header-brand" onClick={goBoard}><Logo size={32} /> Mercado</button>
           <button className="hamburger-btn" onClick={closeMenu} aria-label={t('menu.close')}><X size={22} /></button>
@@ -153,14 +217,20 @@ export default function Layout({ children }) {
         </div>
       </nav>
 
-      <header className="board-header-nav">
+      <header className="app-header">
         <div className="header-left">
-          <button className="hamburger-btn" onClick={() => setIsMenuOpen((open) => !open)} aria-label={t('menu.open')} aria-expanded={isMenuOpen} aria-controls="side-drawer"><Menu size={22} /></button>
-          <button className="header-brand" onClick={goBoard}><Logo size={36} /> mercado</button>
+          <button ref={hamburgerRef} className="hamburger-btn" onClick={() => setIsMenuOpen((open) => !open)} aria-label={t('menu.open')} aria-expanded={isMenuOpen} aria-controls="side-drawer"><Menu size={22} /></button>
+          <button className="header-brand" onClick={goBoard}><Logo size={36} /> Mercado</button>
         </div>
         <div className="header-actions">
-          <button className="icon-btn" onClick={handleLogout} aria-label={t('logout')} title={t('logout')}>
-            <LogOut size={18} />
+          <button
+            className="icon-btn"
+            onClick={goAlerts}
+            aria-label={alerts.length ? t('alerts.bell', { count: alerts.length }) : t('alerts.title')}
+            title={alerts.length ? t('alerts.bell', { count: alerts.length }) : t('alerts.title')}
+          >
+            <Bell size={18} />
+            {alerts.length > 0 && <span className="alert-badge" aria-hidden="true">{alerts.length}</span>}
           </button>
           <button className="icon-btn" onClick={() => setTheme(dark ? 'light' : 'dark')} aria-label={t('theme')}>
             {dark ? <IconSun size={18} /> : <IconMoon size={18} />}

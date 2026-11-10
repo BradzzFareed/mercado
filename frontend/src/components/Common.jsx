@@ -43,12 +43,12 @@ export function Training() {
       <div className="training-orb" aria-hidden="true"><i /><i /><i /></div>
       
       {/* Header */}
-      <h2>Brewing up your fresh market insights...</h2>
+      <h1>Brewing up your fresh market insights…</h1>
       
       <ol>
         {STEPS.map((s, i) => (
           <li key={s} className={i < n ? 'done' : i === n ? 'now' : ''}>
-            <span aria-hidden="true">{i < n ? '' : i === n ? '' : ''}</span>{s}
+            <span aria-hidden="true">{i < n ? '✓' : i === n ? '•' : '○'}</span>{s}
           </li>
         ))}
       </ol>

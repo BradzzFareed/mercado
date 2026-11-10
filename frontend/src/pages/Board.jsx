@@ -27,10 +27,12 @@ export default function Board() {
     <div className="board-page-wrapper">
       <style>{`
         .board-page-wrapper .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+        #board-alerts { scroll-margin-top: 6rem; }
         .board-page-wrapper .kpi {
-          background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);
+          background: var(--surface); border: 1px solid var(--line);
           border-radius: 16px; padding: 1.75rem; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.4s ease;
         }
+        .board-page-wrapper .kpi-basket { background: var(--basket-bg); color: var(--basket-ink); border-color: transparent; }
         .board-page-wrapper .kpi:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 15px 30px rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.4); }
 
         .board-page-wrapper .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }
@@ -46,10 +48,10 @@ export default function Board() {
         }
 
         .board-page-wrapper .panel {
-          background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);
+          background: var(--surface); border: 1px solid var(--line);
           border-radius: 16px; padding: 2rem; margin-top: 2.5rem;
         }
-        .board-page-wrapper .asof { color: #64748b; font-size: 0.85rem; margin: 1.5rem 0; }
+        .board-page-wrapper .asof { color: var(--ink-3); font-size: 0.85rem; margin: 1.5rem 0; }
       `}</style>
 
       <PageHead title={t('board.title')} sub={t('board.sub', { place: `${prov.name} · ${prov.market}` })}>
@@ -87,7 +89,7 @@ export default function Board() {
 
       <p className="asof">{t('board.asof', { date: fmtDate(data.as_of, { month: 'long', day: 'numeric', year: 'numeric' }) })}</p>
 
-      <section className="panel">
+      <section className="panel" id="board-alerts" tabIndex={-1}>
         <h2>{t('alerts.title')}</h2>
         {alerts.length === 0 ? <p className="muted">{t('alerts.none')}</p> : (
           <ul className="alerts">
