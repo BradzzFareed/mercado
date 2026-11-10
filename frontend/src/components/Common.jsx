@@ -48,7 +48,7 @@ export function Training() {
       <ol>
         {STEPS.map((s, i) => (
           <li key={s} className={i < n ? 'done' : i === n ? 'now' : ''}>
-            <span aria-hidden="true">{i < n ? '' : i === n ? '' : ''}</span>{s}
+            <span aria-hidden="true">{i < n ? '✓' : i === n ? '•' : '○'}</span>{s}
           </li>
         ))}
       </ol>
