@@ -232,9 +232,6 @@ export default function Layout({ children }) {
             <Bell size={18} />
             {alerts.length > 0 && <span className="alert-badge" aria-hidden="true">{alerts.length}</span>}
           </button>
-          <button className="icon-btn" onClick={handleLogout} aria-label={t('logout')} title={t('logout')}>
-            <LogOut size={18} />
-          </button>
           <button className="icon-btn" onClick={() => setTheme(dark ? 'light' : 'dark')} aria-label={t('theme')}>
             {dark ? <IconSun size={18} /> : <IconMoon size={18} />}
           </button>
