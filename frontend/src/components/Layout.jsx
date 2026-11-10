@@ -220,7 +220,7 @@ export default function Layout({ children }) {
       <header className="board-header-nav">
         <div className="header-left">
           <button ref={hamburgerRef} className="hamburger-btn" onClick={() => setIsMenuOpen((open) => !open)} aria-label={t('menu.open')} aria-expanded={isMenuOpen} aria-controls="side-drawer"><Menu size={22} /></button>
-          <button className="header-brand" onClick={goBoard}><Logo size={36} /> mercado</button>
+          <button className="header-brand" onClick={goBoard}><Logo size={36} /> Mercado</button>
         </div>
         <div className="header-actions">
           <button
