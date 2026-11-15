@@ -18,6 +18,12 @@ def clear_cache():
         _version["n"] += 1
 
 
+def version():
+    """In-process counter, bumped whenever cached forecasts are cleared."""
+    with _lock:
+        return _version["n"]
+
+
 def _cached(key, fn):
     with _lock:
         if key in _cache:

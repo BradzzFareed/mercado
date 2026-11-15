@@ -288,3 +288,16 @@ def recent_runs(limit=12):
     with store._lock, store.connect() as con:
         rows = con.execute("SELECT id, started, finished, mode, source, status, rows_added, message FROM pipeline_runs ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
     return [dict(r) for r in rows]
+
+
+def last_finished():
+    """Latest pipeline_runs.finished timestamp (ISO-8601) or None. PK-ordered, O(1)."""
+    with store._lock, store.connect() as con:
+        row = con.execute("SELECT finished FROM pipeline_runs ORDER BY id DESC LIMIT 1").fetchone()
+    return row["finished"] if row else None
+
+
+def version_info():
+    """Cheap cache-busting token + display timestamp for /meta."""
+    last = last_finished()
+    return dict(data_version=f"{forecast.version()}:{last or 0}", last_updated=last)
