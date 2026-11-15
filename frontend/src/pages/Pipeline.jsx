@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp, useApi } from '../state'
-import { clearCache, post } from '../api'
+import { post } from '../api'
 import { PageHead, ErrorBox } from '../components/Common'
 import { IconPlay, IconRefresh } from '../components/Icons'
 import { fmtDate } from '../util'
@@ -19,8 +19,12 @@ export default function Pipeline() {
     try {
       const r = await post('/api/v1/pipeline/run', { mode })
       setReport(r)
-      clearCache(); bumpData(); reload()
-    } catch (e) { setErr(e.message) } finally { setBusy(null) }
+      bumpData(); reload()
+    } catch (e) {
+      setErr(e.message)
+      // No HTTP response: the run may have completed server-side, so refresh defensively.
+      if (e.cause && !e.cause.response) bumpData()
+    } finally { setBusy(null) }
   }
   if (error) return <ErrorBox error={error} retry={reload} />
   if (!data) return <p className="muted">{t('common.loading')}</p>

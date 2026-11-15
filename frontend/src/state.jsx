@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- this module exports the app context and data hooks */
 /* eslint-disable react-hooks/set-state-in-effect -- the fetch hooks intentionally reset state when the path changes */
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
-import { get } from './api'
+import { clearCache, get, invalidate } from './api'
 import { translate } from './i18n'
 import { store, save } from './util'
 
@@ -24,6 +24,12 @@ export function AppProvider({ children }) {
   const [lang, setLang] = useState(store('mercado.lang', 'en'))
   const [theme, setTheme] = useState(store('mercado.theme', null))
   const [dataVersion, setDataVersion] = useState(0)
+
+  // Stable identity so consumers can safely put bumpData in dependency arrays.
+  const bumpData = useCallback(() => {
+    clearCache()
+    setDataVersion((v) => v + 1)
+  }, [])
 
   useEffect(() => {
     const on = () => setRoute(parseHash())
@@ -54,7 +60,7 @@ export function AppProvider({ children }) {
 
   const value = {
     route, nav, meta, metaError, loadMeta, province: prov ? prov.id : province, prov, setProvince, horizon, setHorizon,
-    lang, setLang, theme, setTheme, t, commodityBy, bumpData: () => setDataVersion((v) => v + 1), dataVersion,
+    lang, setLang, theme, setTheme, t, commodityBy, bumpData, dataVersion,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
@@ -67,12 +73,12 @@ export function useApi(path, deps = []) {
     if (!path) return
     let alive = true
     setState((s) => ({ ...s, loading: true, error: null }))
-    get(path, { fresh: tick > 0 }).then(
+    get(path).then(
       (data) => alive && setState({ data, error: null, loading: false }),
       (error) => alive && setState({ data: null, error: error.message, loading: false }),
     )
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, tick, ...deps])
-  return { ...state, reload: () => setTick((x) => x + 1) }
+  return { ...state, reload: () => { invalidate(path); setTick((x) => x + 1) } }
 }

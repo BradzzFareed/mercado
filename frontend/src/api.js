@@ -16,7 +16,8 @@ export async function get(path, { fresh = false } = {}) {
     throw new Error(message(e), { cause: e })
   })
   cache.set(path, p)
-  p.catch(() => cache.delete(path))
+  // Evict only this promise: a late failure must not delete a newer entry for the same path.
+  p.catch(() => { if (cache.get(path) === p) cache.delete(path) })
   return p
 }
 
@@ -29,4 +30,5 @@ export async function post(path, body) {
   }
 }
 
+export const invalidate = (path) => cache.delete(path)
 export const clearCache = () => cache.clear()
