@@ -155,10 +155,6 @@ def detail(province, commodity, hist_weeks=104):
     total = (r["point"][n - 1] / cur - 1) * 100
     drivers = dict(total_pct=round(float(total), 2), seasonal_pct=round(float(seas), 2), trend_pct=round(float(trend), 2),
                    momentum_pct=round(float(total - seas - trend), 2), weeks=n)
-    bt = res.backtest
-    bt_out = dict(metrics={k: {kk: (None if vv is None else round(vv, 2)) for kk, vv in v.items()} for k, v in bt["metrics"].items()},
-                  weights={k: round(v, 3) for k, v in bt["weights"].items()}, series=bt["series"],
-                  origins=bt["origins"], labels=models.LABELS)
     members = {m: [round(float(np.exp(v)), 2) for v in res.members[m]] for m in res.members}
     vals = s.values[-52:]
     return dict(
@@ -168,7 +164,7 @@ def detail(province, commodity, hist_weeks=104):
         stats=dict(min_52w=round(float(vals.min()), 2), max_52w=round(float(vals.max()), 2),
                    avg_52w=round(float(vals.mean()), 2), percentile_52w=round(float((vals <= cur).mean() * 100), 0),
                    volatility_pct=round(float(np.std(np.diff(np.log(s.values[-52:]))) * 100), 2)),
-        seasonality=seasonality(province, commodity), members=members, model_lab=bt_out)
+        seasonality=seasonality(province, commodity), members=members)
 
 
 def price_map(commodity):

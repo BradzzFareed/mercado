@@ -17,10 +17,6 @@ CREATE TABLE IF NOT EXISTS prices(
   commodity TEXT NOT NULL, price REAL NOT NULL, source TEXT,
   PRIMARY KEY(date, province, commodity)
 );
-CREATE TABLE IF NOT EXISTS pipeline_runs(
-  id INTEGER PRIMARY KEY AUTOINCREMENT, started TEXT, finished TEXT, mode TEXT,
-  source TEXT, status TEXT, rows_added INTEGER, message TEXT, log TEXT
-);
 """
 
 

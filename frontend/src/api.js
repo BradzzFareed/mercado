@@ -20,13 +20,3 @@ export async function get(path, { fresh = false } = {}) {
   return p
 }
 
-export async function post(path, body) {
-  try {
-    const r = await axios.post(url(path), body || {})
-    return r.data
-  } catch (e) {
-    throw new Error(message(e), { cause: e })
-  }
-}
-
-export const clearCache = () => cache.clear()

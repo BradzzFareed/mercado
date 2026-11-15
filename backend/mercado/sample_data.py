@@ -3,12 +3,10 @@
 Produces weekly retail prices that *behave like* Philippine wet-market data
 (seasonal vegetables, rainy-season spikes, Christmas pork, typhoon shocks,
 the 2022-23 onion crisis, rice price swings) so the platform can be demoed
-offline. It is synthetic - NOT official statistics. Swap it for real data by
-running the pipeline against WFP/HDX or by dropping CSVs in data/inbox/.
+offline. It is synthetic - NOT official statistics.
 
 Determinism: every series is generated from a fixed seed over a long horizon and
-then truncated, so asking for more weeks never changes earlier weeks. That is
-what lets the demo "receive a new week" from the pipeline.
+then truncated, so asking for more weeks never changes earlier weeks.
 """
 from datetime import date, timedelta
 import numpy as np
@@ -130,10 +128,3 @@ def generate(end=DEFAULT_END, provinces=None, comms=None):
             for d, v in zip(dates, price):
                 rows.append((d, p["id"], p["region"], p["market"], c["id"], round(float(v), 2), "sample"))
     return pd.DataFrame(rows, columns=["date", "province", "region", "market", "commodity", "price", "source"])
-
-
-def next_week_rows(current_last_date):
-    """Rows for the single week after `current_last_date` (used by the demo pipeline)."""
-    nxt = current_last_date + timedelta(weeks=1)
-    df = generate(end=nxt)
-    return df[df["date"] == nxt].reset_index(drop=True)

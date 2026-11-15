@@ -8,12 +8,11 @@ import pytest
 
 os.environ["MERCADO_DATA_DIR"] = tempfile.mkdtemp()
 os.environ.setdefault("MERCADO_WARM", "0")
-os.environ.setdefault("MERCADO_SCHEDULER", "0")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from mercado import store, sample_data, models, geo, commodities as cm, pipeline, forecast  # noqa: E402
+from mercado import sample_data, models, geo, commodities as cm  # noqa: E402
 from main import app  # noqa: E402
 
 
@@ -40,44 +39,19 @@ def test_ensemble_beats_naive_on_seasonal_series():
     assert (np.diff(res.sigma) >= 0).all()
 
 
-def test_wfp_normalizer_handles_hxl_row_and_units():
-    raw = pd.DataFrame({
-        "date": ["#date", "2026-09-15", "2026-09-15", "2026-09-15", "2026-09-15"],
-        "admin1": ["#adm1", "Region VII", "Region VII", "Region VII", "NCR"],
-        "admin2": ["#adm2", "Cebu", "Cebu", "Cebu", "Metropolitan Manila"],
-        "market": ["#loc", "Cebu City", "Cebu City", "Cebu City", "Quezon City"],
-        "commodity": ["#item", "Rice (regular, milled)", "Eggs", "Meat (pork)", "Wheat flour"],
-        "unit": ["#unit", "KG", "30 pcs", "KG", "KG"],
-        "pricetype": ["#priceType", "Retail", "Retail", "Retail", "Retail"],
-        "currency": ["#cur", "PHP", "PHP", "PHP", "PHP"],
-        "price": ["#price", "48", "300", "380", "50"],
-    })
-    out, skipped = pipeline.normalize_wfp(raw)
-    assert set(out["commodity"]) == {"rice", "eggs", "pork"}
-    assert out.loc[out["commodity"] == "eggs", "price"].iloc[0] == 120.0   # 300 per 30 pcs -> 120 per dozen
-    assert set(out["province"]) == {"cebu"}   # the only NCR row is wheat flour, which is skipped
-    assert skipped == 1
-
-
 def test_api_endpoints(client):
     meta = client.get("/api/v1/meta").json()
     assert len(meta["provinces"]) >= 20 and len(meta["commodities"]) == 10
+    assert "typhoon" not in meta["commodities"][0]
     ov = client.get("/api/v1/overview?province=ncr").json()
     assert len(ov["items"]) == 10
     assert all(i["horizons"]["14"]["signal"] in ("dip", "surge", "stable") for i in ov["items"])
     d = client.get("/api/v1/forecast?province=ncr&commodity=tomato").json()
     assert len(d["forecast"]) == 5 and d["forecast"][0]["lo"] < d["forecast"][0]["price"] < d["forecast"][0]["hi"]
-    assert "ensemble" in d["model_lab"]["metrics"]
+    assert "model_lab" not in d
     assert client.get("/api/v1/forecast?province=nope&commodity=rice").status_code == 404
 
 
-def test_pipeline_simulate_adds_a_week_and_changes_data(client):
-    before = store.last_date()
-    rep = client.post("/api/v1/pipeline/run", json={"mode": "simulate"}).json()
-    assert rep["status"] == "ok" and rep["rows_added"] == len(geo.PROVINCES) * len(cm.COMMODITIES)
-    assert (store.last_date() - before).days == 7
-
-
-def test_live_mode_degrades_gracefully_offline(client):
-    rep = client.post("/api/v1/pipeline/run", json={"mode": "live"}).json()
-    assert rep["status"] in ("ok", "no_update")
+def test_removed_features_have_no_routes(client):
+    assert client.get("/api/v1/pipeline").status_code == 404
+    assert client.post("/api/v1/pipeline/run", json={"mode": "simulate"}).status_code == 404

@@ -26,14 +26,6 @@ function cssVar(name, fallback = '#888') {
   return v || fallback
 }
 
-function resolveColor(c, fallback) {
-  if (typeof c === 'string' && c.startsWith('var(')) {
-    const m = c.match(/var\((--[^),]+)/)
-    if (m) return cssVar(m[1], fallback)
-  }
-  return c || fallback
-}
-
 function theme() {
   return {
     ink: cssVar('--ink', '#11261d'),
@@ -356,60 +348,6 @@ export function SeasonBars({ values, currentMonth, height = 170 }) {
   return (
     <div className="chart" style={{ height }} role="img" aria-label="Average seasonal price effect by month">
       <Bar data={data} options={options} plugins={[cheapestLabel]} />
-    </div>
-  )
-}
-
-/* --------------------------------------------------------------- multi-line chart */
-export function MultiLine({ rows, series, height = 230 }) {
-  const t = theme()
-  const labels = rows.map((r) => r.date)
-  const step = Math.max(1, Math.ceil(rows.length / 5))
-
-  const data = useMemo(() => ({
-    labels,
-    datasets: series.map((s) => ({
-      label: s.label,
-      data: rows.map((r) => r[s.key]),
-      borderColor: resolveColor(s.color, t.ink),
-      borderWidth: s.w || 2,
-      borderDash: s.dash ? s.dash.split(/\s+/).map(Number) : undefined,
-      pointRadius: 0,
-      pointHoverRadius: 4,
-      pointBackgroundColor: resolveColor(s.color, t.ink),
-      pointBorderColor: t.surface,
-      pointBorderWidth: 2,
-      tension: 0,
-    })),
-  }), [labels, rows, series, t])
-
-  const options = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        ...tooltipStyle(t),
-        displayColors: true,
-        callbacks: {
-          title: (items) => fmtDate(items[0].label, { month: 'short', day: 'numeric' }),
-          label: (item) => `${item.dataset.label}: ${peso(item.parsed.y)}`,
-        },
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { color: t.ink3, maxRotation: 0, autoSkip: false, callback: (_v, i) => (i % step === 0 ? fmtDate(labels[i]) : '') },
-      },
-      y: { grid: { color: t.line }, ticks: { color: t.ink3, callback: (v) => peso(v, 0) } },
-    },
-  }), [t, labels, step])
-
-  return (
-    <div className="chart" style={{ height }} role="img" aria-label="Backtest: actual versus predicted prices">
-      <Line data={data} options={options} />
     </div>
   )
 }

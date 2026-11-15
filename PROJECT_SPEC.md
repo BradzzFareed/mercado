@@ -8,7 +8,7 @@
 
 ## 1. What the project is
 
-Mercado forecasts retail food prices in the Philippines at province level. A user picks a province and sees current prices, 7/14/30-day forecasts with an 80% band, and surge/dip/stable signals for 10 basic commodities. Secondary features: a price map, a carinderia (small eatery) menu-cost planner, a what-if lab (typhoon and fuel sliders), a model-accuracy lab, and a pipeline control panel.
+Mercado forecasts retail food prices in the Philippines at province level. A user picks a province and sees current prices, 7/14/30-day forecasts with an 80% band, and surge/dip/stable signals for 10 basic commodities. Secondary features: a price map and a carinderia (small eatery) menu-cost planner.
 
 It is a **two-app repository with no root workspace**:
 
@@ -55,13 +55,11 @@ mercado/
 │   │   ├── sample_data.py         # deterministic synthetic weekly price generator
 │   │   ├── models.py              # naive / Holt-Winters / Ridge / GBM / ensemble, backtests
 │   │   ├── forecast.py            # result cache, signals, horizon blocks, overview/detail/map/compare, warm()
-│   │   ├── pipeline.py            # live / wfp / inbox / da / simulate / seed ingestion and run log
-│   │   ├── scheduler.py           # background thread that re-runs the pipeline
 │   │   ├── commodities.py         # 10 commodities, 6 carinderia dishes
 │   │   └── geo.py                 # 25 provinces, 16 regions, haversine distance, name matching
-│   ├── data/                      # GITIGNORED, generated: mercado.db, live/, inbox/
+│   ├── data/                      # GITIGNORED, generated: mercado.db
 │   └── tests/
-│       └── test_mercado.py        # 6 pytest tests via fastapi.testclient
+│       └── test_mercado.py        # 4 pytest tests via fastapi.testclient
 │
 └── frontend/
     ├── .env.example               # VITE_API_BASE, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_DEV_BYPASS_AUTH
@@ -73,27 +71,24 @@ mercado/
         ├── main.jsx               # imports index.css THEN styles.css
         ├── App.jsx                # auth gate, route switch, wraps pages in Layout
         ├── state.jsx              # hash router, AppProvider context, useApi
-        ├── api.js                 # axios wrapper with promise cache; clearCache()
+        ├── api.js                 # axios wrapper with promise cache
         ├── supabaseClient.js      # supabase client, or null when env vars are missing
         ├── i18n.js                # English / Filipino strings; translate()
         ├── alerts.js              # buildAlerts(), advise()
-        ├── util.js                # peso, pct, fmtDate, classify, store/save, changeColor, …
+        ├── util.js                # peso, pct, fmtDate, store/save, changeColor, …
         ├── index.css              # @import "tailwindcss";
         ├── styles.css             # legacy design system (tokens, layout, component classes)
         ├── pages/
         │   ├── Auth.jsx           # Supabase sign in / sign up (renders outside Layout)
         │   ├── Board.jsx          # price board: KPI cards, price tags, alerts
-        │   ├── Detail.jsx         # commodity detail: forecast chart, stats, drivers, backtest
+        │   ├── Detail.jsx         # commodity detail: forecast chart, stats, drivers
         │   ├── MapPage.jsx        # Philippines map and regional legend
-        │   ├── Planner.jsx        # carinderia menu costing and shopping list (localStorage)
-        │   ├── WhatIf.jsx         # typhoon and fuel sliders over the forecast
-        │   ├── ModelLab.jsx       # ensemble vs naive accuracy per commodity
-        │   └── Pipeline.jsx       # dataset info, scheduler state, run-now per mode
+        │   └── Planner.jsx        # carinderia menu costing and shopping list (localStorage)
         └── components/
             ├── Layout.jsx         # app shell: header, drawer, nav, LocationPicker, language/theme toggles, logout
             ├── Common.jsx         # PageHead, HorizonToggle, Training, ErrorBox, SampleBadge
             ├── PriceTag.jsx       # PriceTag, SignalChip
-            ├── Charts.jsx         # ForecastChart, SeasonBars, MultiLine, DriverBars (Chart.js); Sparkline (SVG)
+            ├── Charts.jsx         # ForecastChart, SeasonBars, DriverBars (Chart.js); Sparkline (SVG)
             ├── PhilippinesMap.jsx # SVG dot-matrix map
             ├── Pinmarker.jsx      # map pin
             ├── LocationPicker.jsx # province / market picker
@@ -108,10 +103,8 @@ mercado/
 
 `app = FastAPI(title="Mercado API", lifespan=lifespan)`. The lifespan runs, in order:
 
-1. `seed_if_empty()`: calls `store.init_db()`. If `store.count_rows() == 0`, it inserts `sample_data.generate()` and writes a `pipeline_runs` row with `mode="seed"`.
+1. `seed_if_empty()`: calls `store.init_db()`. If `store.count_rows() == 0`, it inserts `sample_data.generate()`.
 2. If `MERCADO_WARM != "0"` and rows exist, starts a daemon thread running `forecast.warm()`.
-3. If `MERCADO_SCHEDULER != "0"`, calls `scheduler.start()`.
-4. On shutdown, calls `scheduler.stop()`.
 
 CORS allows only `http://localhost:5173` and `http://127.0.0.1:5173`. All feature routes live on `API = APIRouter(prefix="/api/v1")`, which is included into the app. `GET /` is an unversioned welcome route.
 
@@ -125,8 +118,6 @@ CORS allows only `http://localhost:5173` and `http://127.0.0.1:5173`. All featur
 | GET | `/api/v1/forecast?province=&commodity=` | `fc` | `forecast.detail()` payload |
 | GET | `/api/v1/map?commodity=` | `pmap` | `{rows[]}`, one per available province |
 | GET | `/api/v1/compare?province=&commodity=` | `compare` | `{province, commodity, mine, rows[], best_nearby}` with `distance_km`, `diff_pct`, `diff_abs` |
-| GET | `/api/v1/pipeline` | `pipe` | `{dataset, scheduler, sources, runs}` |
-| POST | `/api/v1/pipeline/run` | `pipe_run` | body `{mode}` (defaults to `"live"`) → run report |
 | GET | `/` | `home` | welcome JSON |
 
 **Error shape.** Domain failures return `{error: msg}` through the `_err` helper. `HTTPException` (for example an unknown province through `_check_prov`) returns `{detail: msg}`. The frontend reads `error` first, then `detail`. Keep both shapes.
@@ -136,12 +127,10 @@ CORS allows only `http://localhost:5173` and `http://127.0.0.1:5173`. All featur
 | Module | Role |
 |---|---|
 | `store.py` | SQLite at `MERCADO_DATA_DIR/mercado.db` (default `backend/data`). A module `RLock` guards writes. Functions: `connect`, `init_db`, `count_rows`, `upsert_prices`, `reset_prices`, `load`, `invalidate`, `last_date`, `series`, `available`. `load()` caches the full price table as a DataFrame until `invalidate()`. `series(province, commodity)` returns a weekly Monday series, interpolated, and raises `ValueError` under 110 weeks. |
-| `sample_data.py` | Deterministic synthetic history. `START = 2019-01-07`, `DEFAULT_END = 2026-10-26`, which is 408 weeks. Functions: `week_dates`, `n_weeks`, `generate`, `next_week_rows`. Same seed and end date produce the same prefix. |
+| `sample_data.py` | Deterministic synthetic history. `START = 2019-01-07`, `DEFAULT_END = 2026-10-26`, which is 408 weeks. Functions: `week_dates`, `n_weeks`, `generate`. Same seed and end date produce the same prefix. |
 | `models.py` | All models work on **log** weekly prices. `MODEL_NAMES = ["naive", "holt_winters", "ridge", "gbm"]`. `gbm` is sklearn's `GradientBoostingRegressor`. Helpers include `holt_winters`, `build_matrix`, `feature_forecast`. `quick()` is the cheap fallback. `full()` runs the rolling-origin backtest and builds the **ensemble**, an inverse-squared-error weighted blend of the four models. `HORIZON = 5` weeks. |
 | `forecast.py` | Result cache keyed by `(kind, mode, province, commodity)` with a version counter. `HORIZONS = (7, 14, 30)`. Public functions: `summary`, `overview`, `detail`, `seasonality`, `price_map`, `compare`, `warm`, `clear_cache`. `summary(..., allow_quick=True)` may use the quick model for series without a full ensemble yet. |
-| `pipeline.py` | `MODES = ("live", "wfp", "inbox", "da", "simulate", "seed")`. `run(mode)` never raises; failures come back as `status: "error"`. A non-blocking `_run_lock` prevents concurrent runs. `normalize_wfp` skips the HXL tag row, filters to retail, converts units to kg or dozen, and matches commodities and provinces. `fetch_wfp`, `read_inbox`, `apply_live`, `recent_runs`. |
-| `scheduler.py` | Daemon thread on `MERCADO_REFRESH_HOURS` (default 24). Functions: `start(interval_hours=None)`, `stop()`, `info()`. |
-| `commodities.py` | `COMMODITIES` (10: rice, pork, chicken, eggs, bangus, tomato, onion, calamansi, cabbage, eggplant) with display metadata, typhoon and fuel sensitivities, and shelf life. `DISHES` (6) with per-serving ingredient amounts. `BY_ID`, `public()`, `match_commodity()`, `dishes()`. |
+| `commodities.py` | `COMMODITIES` (10: rice, pork, chicken, eggs, bangus, tomato, onion, calamansi, cabbage, eggplant) with display metadata and shelf life. `DISHES` (6) with per-serving ingredient amounts. `BY_ID`, `public()`, `match_commodity()`, `dishes()`. |
 | `geo.py` | `PROVINCES` (25) with region, representative market, coordinates, and aliases. `BY_ID`, `regions()` (16), `match_province()`, `haversine_km()`. |
 
 ### 4.4 Forecast semantics
@@ -164,13 +153,6 @@ CREATE TABLE prices(
   commodity TEXT NOT NULL, price REAL NOT NULL, source TEXT,
   PRIMARY KEY(date, province, commodity)
 );
-
-CREATE TABLE pipeline_runs(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  started TEXT, finished TEXT, mode TEXT, source TEXT,
-  status TEXT, rows_added INTEGER, message TEXT,
-  log TEXT                              -- JSON array of log lines
-);
 ```
 
 Seeded dataset: 25 provinces × 10 commodities × 408 weeks = 102,000 rows, `as_of` 2026-10-26. The database is generated at runtime and gitignored. Delete `backend/data/mercado.db` to force a reseed.
@@ -185,7 +167,7 @@ Seeded dataset: 25 provinces × 10 commodities × 408 weeks = 102,000 rows, `as_
 Page component → useApi(path, deps) → api.get(path) → axios → Vite proxy /api → FastAPI /api/v1 → forecast.py → store.py → SQLite
 ```
 
-- `api.js` caches **promises** in a `Map` keyed by path. `get(path, {fresh: true})` bypasses the cache. `post()` never caches. `clearCache()` empties the map.
+- `api.js` caches **promises** in a `Map` keyed by path. `get(path, {fresh: true})` bypasses the cache. Failed requests are evicted from the cache.
 - `useApi(path, deps)` (in `state.jsx`) refetches when the path or deps change. `reload()` forces a fresh fetch.
 - In development, `vite.config.js` proxies `/api` to `http://127.0.0.1:8000`, so `VITE_API_BASE` stays empty.
 
@@ -193,13 +175,11 @@ Page component → useApi(path, deps) → api.get(path) → axios → Vite proxy
 
 `src/state.jsx` provides a hand-rolled hash router and one context from `AppProvider`.
 
-Routes, handled in `App.jsx`: `#/board`, `#/commodity/<id>`, `#/map`, `#/planner`, `#/whatif`, `#/lab`, `#/pipeline`, `#/auth`. `nav(page, arg)` sets the hash and scrolls to the top.
+Routes, handled in `App.jsx`: `#/board`, `#/commodity/<id>`, `#/map`, `#/planner`, `#/auth`. `nav(page, arg)` sets the hash and scrolls to the top.
 
-Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `prov`, `setProvince`, `horizon`, `setHorizon`, `lang`, `setLang`, `theme`, `setTheme`, `t`, `commodityBy`, `dataVersion`, `bumpData`.
+Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `prov`, `setProvince`, `horizon`, `setHorizon`, `lang`, `setLang`, `theme`, `setTheme`, `t`, `commodityBy`.
 
 `localStorage` keys: `mercado.province` (default `ncr`), `mercado.horizon` (default 14), `mercado.lang`, `mercado.theme`. The Planner also stores `mercado.sell`, `mercado.qty`, `mercado.target`, and `mercado.servings`.
-
-`loadMeta` re-fetches `/meta` whenever `dataVersion` changes.
 
 ### 6.3 Authentication and shell
 
@@ -222,7 +202,7 @@ Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `pr
 
 ### 6.5 Charts
 
-- **Chart.js** via `react-chartjs-2`: `ForecastChart`, `SeasonBars`, `MultiLine`, and `DriverBars`.
+- **Chart.js** via `react-chartjs-2`: `ForecastChart`, `SeasonBars`, and `DriverBars`.
 - **Hand-rolled SVG:** `Sparkline` (in `Charts.jsx`) and `PhilippinesMap` (with `Pinmarker`). Keep these as SVG.
 - Charts read theme colors when they render, so a theme change needs a re-render.
 
@@ -231,12 +211,9 @@ Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `pr
 | Route | Page | Purpose |
 |---|---|---|
 | `#/board` | `Board.jsx` | Basket total and surge/dip counts, price tags with sparklines, alerts, horizon toggle |
-| `#/commodity/<id>` | `Detail.jsx` | Forecast chart, stats, drivers, seasonality, model members, backtest, nearby cheaper markets |
+| `#/commodity/<id>` | `Detail.jsx` | Forecast chart, stats, drivers, seasonality, model members, nearby cheaper markets |
 | `#/map` | `MapPage.jsx` | Map colored by expected change at the selected horizon; click a province to select it |
 | `#/planner` | `Planner.jsx` | Menu costing, margin at risk, shopping list |
-| `#/whatif` | `WhatIf.jsx` | Typhoon (0–1) and fuel (−20…+60%) sliders over the forecast |
-| `#/lab` | `ModelLab.jsx` | Ensemble vs naive MAPE and direction accuracy per commodity |
-| `#/pipeline` | `Pipeline.jsx` | Dataset and scheduler state, run-now per mode, run history |
 | `#/auth` | `Auth.jsx` | Supabase sign in and sign up |
 
 ---
@@ -247,7 +224,7 @@ Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `pr
 # Backend (from backend/)
 uv sync
 uv run uvicorn main:app --reload        # :8000, docs at /docs
-uv run pytest -q                        # 6 tests, roughly 60–100 s (warms forecasts)
+uv run pytest -q                        # 4 tests, roughly 30–60 s (warms forecasts)
 
 # Frontend (from frontend/)
 pnpm install
@@ -261,10 +238,8 @@ Backend environment variables:
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `MERCADO_DATA_DIR` | `backend/data` | SQLite and pipeline state location |
+| `MERCADO_DATA_DIR` | `backend/data` | SQLite location |
 | `MERCADO_WARM` | `1` | Set `0` to skip forecast pre-computation at startup |
-| `MERCADO_SCHEDULER` | `1` | Set `0` to disable the recurring pipeline refresh |
-| `MERCADO_REFRESH_HOURS` | `24` | Scheduler interval |
 
 Frontend environment (`frontend/.env`):
 
@@ -281,13 +256,10 @@ Frontend environment (`frontend/.env`):
 
 ## 8. Known issues
 
-1. **`da` pipeline mode is incomplete.** `pipeline.py` finds PDF report links, but PDF table parsing is not implemented. The parser stub raises `NotImplementedError`, and `run()` logs that nothing was imported.
-2. **Client cache can serve stale data after a pipeline run.** `api.js` keeps promises for the lifetime of the page. The Pipeline page calls `clearCache()` and `bumpData()` after its own runs, but runs started by the scheduler or from another tab do not reach the cache. Those views stay stale until a full page reload.
-3. **What-If signal thresholds differ from the backend.** `util.js` `classify()` uses a fixed ±2.5%. The backend uses `max(2.5, 0.5 × σ%)`, so a high-volatility series can show different signals in the lab than on the board. The `classify` comment says the thresholds are the same, which is not true when σ is large.
-4. **No frontend tests.** `package.json` has `dev`, `build`, `lint`, and `preview` scripts only.
-5. **Pytest emits a Starlette deprecation warning** about `httpx` inside `TestClient`. It is not a failure.
-6. **`pnpm build` warns about a chunk over 500 kB.** It is not a failure.
-7. **Board's scoped styles use hardcoded light-on-dark colors.** This is a follow-up, not a bug.
+1. **No frontend tests.** `package.json` has `dev`, `build`, `lint`, and `preview` scripts only.
+2. **Pytest emits a Starlette deprecation warning** about `httpx` inside `TestClient`. It is not a failure.
+3. **`pnpm build` warns about a chunk over 500 kB.** It is not a failure.
+4. **Board's scoped styles use hardcoded light-on-dark colors.** This is a follow-up, not a bug.
 
 ---
 
@@ -310,10 +282,10 @@ These are declared in `pyproject.toml` for planned model work. They are intentio
 5. **Model internals use log prices.** Changes to `models.py` or `forecast.py` must keep the ensemble beating the naive baseline in the backtest and keep σ non-decreasing across horizons. The tests assert both.
 6. **Do not reorder the CSS imports** in `main.jsx` without migrating the affected screens.
 7. **Layout owns the shell.** Pages render content only.
-8. **Keep `Sparkline` and `PhilippinesMap` as SVG.** Only the four main charts use Chart.js.
-9. **Reseeding is destructive.** `POST /api/v1/pipeline/run {"mode": "seed"}` rebuilds the price table.
+8. **Keep `Sparkline` and `PhilippinesMap` as SVG.** Only the three main charts use Chart.js.
+9. **Reseeding is destructive.** Deleting `backend/data/mercado.db` (or pointing `MERCADO_DATA_DIR` at an empty directory) re-seeds the price table from `sample_data.generate()`.
 10. **Synthetic data is deterministic.** Changing `sample_data.py` changes every forecast and breaks fixture-style expectations.
-11. **Never commit** `.env`, `backend/data/*.db`, `backend/data/live/`, `backend/data/inbox/`, `node_modules/`, or `dist/`.
+11. **Never commit** `.env`, `backend/data/*.db`, `node_modules/`, or `dist/`.
 12. **Verify with:** `uv run pytest -q`, `pnpm lint`, `pnpm build`, then `curl` `/api/v1/health`, `/api/v1/meta`, `/api/v1/overview?province=ncr`, and `/api/v1/forecast?province=ncr&commodity=tomato`.
 
 ---

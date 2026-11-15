@@ -1,7 +1,7 @@
-"""Commodity catalogue: display metadata, shock sensitivities, sample-data parameters."""
+"""Commodity catalogue: display metadata, sample-data parameters."""
 
 # sens_* are the percent change in price per 1.0 unit of the scenario slider
-# (see the What-If Lab); they are expert-style assumptions, not fitted values.
+# used when generating the synthetic history (see sample_data.py).
 COMMODITIES = [
     dict(id="rice", name="Rice (regular milled)", short="Rice", fil="Bigas", group="Grains", unit="kg", icon="🍚",
          base=40, drift=0.035, amp=0.02, peak=38, vol=0.006, typhoon=0.35, fuel=0.20, shelf=180, basket=5.0,
@@ -36,7 +36,7 @@ COMMODITIES = [
 ]
 BY_ID = {c["id"]: c for c in COMMODITIES}
 
-PUBLIC_FIELDS = ["id", "name", "short", "fil", "group", "unit", "icon", "typhoon", "fuel", "shelf", "basket"]
+PUBLIC_FIELDS = ["id", "name", "short", "fil", "group", "unit", "icon", "shelf", "basket"]
 
 
 def public():

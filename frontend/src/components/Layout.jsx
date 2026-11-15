@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp, useApi } from '../state'
 import LocationPicker from './LocationPicker'
-import { Logo, IconBoard, IconMap, IconPlan, IconWhat, IconLab, IconPipe, IconSun, IconMoon } from './Icons'
+import { Logo, IconBoard, IconMap, IconPlan, IconSun, IconMoon } from './Icons'
 import { LogOut, Bell, Menu, X, Globe } from 'lucide-react'
 import { buildAlerts } from '../alerts'
 import { supabase } from '../supabaseClient'
 
 const NAV = [
   ['board', 'nav.board', IconBoard], ['map', 'nav.map', IconMap], ['planner', 'nav.planner', IconPlan],
-  ['whatif', 'nav.whatif', IconWhat], ['lab', 'nav.lab', IconLab], ['pipeline', 'nav.pipeline', IconPipe],
 ]
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export default function Layout({ children }) {
-  const { nav, route, t, lang, setLang, theme, setTheme, province, horizon, commodityBy, dataVersion } = useApp()
+  const { nav, route, t, lang, setLang, theme, setTheme, province, horizon, commodityBy } = useApp()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [jumpToAlerts, setJumpToAlerts] = useState(false)
   const mainRef = useRef(null)
@@ -22,7 +21,7 @@ export default function Layout({ children }) {
   const wasOpen = useRef(false)
 
   // Shared with Board through api.js' per-path promise cache.
-  const { data: overview } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
+  const { data: overview } = useApi(`/api/v1/overview?province=${province}`)
   const alerts = useMemo(
     () => (overview && Object.keys(commodityBy).length ? buildAlerts(overview.items, commodityBy, horizon, t) : []),
     [overview, commodityBy, horizon, t],

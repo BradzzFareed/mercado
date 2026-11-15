@@ -8,7 +8,7 @@ import { store, save } from './util'
 const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
 
-// ---- hash router: #/board, #/commodity/rice, #/map, #/planner, #/whatif, #/pipeline
+// ---- hash router: #/board, #/commodity/rice, #/map, #/planner
 function parseHash() {
   const h = (window.location.hash || '#/board').replace(/^#\/?/, '')
   const [page, arg] = h.split('/')
@@ -23,7 +23,6 @@ export function AppProvider({ children }) {
   const [horizon, setHorizon] = useState(store('mercado.horizon', 14))
   const [lang, setLang] = useState(store('mercado.lang', 'en'))
   const [theme, setTheme] = useState(store('mercado.theme', null))
-  const [dataVersion, setDataVersion] = useState(0)
 
   useEffect(() => {
     const on = () => setRoute(parseHash())
@@ -35,7 +34,7 @@ export function AppProvider({ children }) {
     setMetaError(null)
     get('/api/v1/meta', { fresh: true }).then(setMeta).catch((e) => setMetaError(e.message))
   }, [])
-  useEffect(loadMeta, [loadMeta, dataVersion])
+  useEffect(loadMeta, [loadMeta])
 
   useEffect(() => save('mercado.province', province), [province])
   useEffect(() => save('mercado.horizon', horizon), [horizon])
@@ -54,7 +53,7 @@ export function AppProvider({ children }) {
 
   const value = {
     route, nav, meta, metaError, loadMeta, province: prov ? prov.id : province, prov, setProvince, horizon, setHorizon,
-    lang, setLang, theme, setTheme, t, commodityBy, bumpData: () => setDataVersion((v) => v + 1), dataVersion,
+    lang, setLang, theme, setTheme, t, commodityBy,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

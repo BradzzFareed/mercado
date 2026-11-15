@@ -9,7 +9,7 @@ Run commands from the relevant app directory, not the repo root.
 Backend (from `backend/`):
 - `uv sync` — install deps into `backend/.venv`
 - `uv run uvicorn main:app --reload` — dev server on http://127.0.0.1:8000 (docs at `/docs`)
-- `uv run pytest -q` — 6 tests in `tests/test_mercado.py`, about 60–100 s (forecast warm-up dominates)
+- `uv run pytest -q` — 4 tests in `tests/test_mercado.py`, about 30–60 s (forecast warm-up dominates)
 - Always go through `uv run`; do not rely on a globally installed Python env.
 
 Frontend (from `frontend/`):
@@ -27,10 +27,10 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   `uv sync` installs dependencies only.
 - Backend requires Python **3.14+** (`pyproject.toml`, `backend/.python-version`).
 - `backend/mercado/` is the live forecast engine: `store.py` (SQLite),
-  `models.py`/`forecast.py` (Holt-Winters + Ridge + gradient-boosted trees),
-  `pipeline.py` (live/wfp/inbox/da/simulate/seed), `scheduler.py`, and static
-  reference data (`geo.py`, `commodities.py`, `sample_data.py`). The `simulate` mode
-  appends one week via `sample_data.next_week_rows()`; there is no separate simulator module.
+  `models.py`/`forecast.py` (Holt-Winters + Ridge + gradient-boosted trees), and
+  static reference data (`geo.py`, `commodities.py`, `sample_data.py`). Prices are
+  seeded once at startup from `sample_data.generate()`; there is no background
+  refresh job.
 - SQLAlchemy, XGBoost, and joblib are declared in `pyproject.toml` but not imported
   anywhere. The store is still stdlib `sqlite3`, and the `gbm` model is scikit-learn's
   `GradientBoostingRegressor`.
@@ -39,7 +39,7 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
 - Tailwind is v4 through `@tailwindcss/vite`. `src/index.css` holds
   `@import "tailwindcss";`; `src/styles.css` is the legacy Mercado design system
   and is imported **after** it so legacy rules win. There is no `tailwind.config.js`.
-- Charts: `ForecastChart`, `SeasonBars`, `MultiLine`, and `DriverBars` use
+- Charts: `ForecastChart`, `SeasonBars`, and `DriverBars` use
   Chart.js via `react-chartjs-2`. `Sparkline` and `PhilippinesMap` remain
   hand-rolled SVG.
 - Auth uses Supabase. `src/supabaseClient.js` reads `VITE_SUPABASE_URL` and
@@ -62,8 +62,7 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   If the Vite port changes, update both sides.
 - `frontend/src/api.js` is an axios wrapper that surfaces backend `{error}` bodies
   (and FastAPI `{detail}`) as `Error.message`. It caches GET promises per path for the
-  page session. After a pipeline run that does not come from the Pipeline page, call
-  `clearCache()` or fetch with `{fresh: true}`, or the UI stays stale.
+  page session; pass `{fresh: true}` to bypass that cache.
 
 ## Environment
 

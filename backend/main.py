@@ -9,28 +9,19 @@ Endpoints are mounted under /api/v1 and documented at /docs.
 import os
 import threading
 from contextlib import asynccontextmanager
-from datetime import datetime
 
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 
 from mercado import commodities as cm
-from mercado import forecast, geo, pipeline, sample_data, scheduler, store
+from mercado import forecast, geo, sample_data, store
 
 
 def seed_if_empty():
     store.init_db()
     if store.count_rows() == 0:
-        n = store.upsert_prices(sample_data.generate())
-        now = datetime.now().isoformat(timespec="seconds")
-        with store._lock, store.connect() as con:
-            con.execute(
-                "INSERT INTO pipeline_runs(started, finished, mode, source, status, rows_added, message, log) "
-                "VALUES (?,?,?,?,?,?,?,?)",
-                (now, now, "seed", "sample", "ok", int(n), f"loaded synthetic history ({n} rows)", "[]"),
-            )
+        store.upsert_prices(sample_data.generate())
 
 
 @asynccontextmanager
@@ -39,10 +30,7 @@ async def lifespan(app: FastAPI):
     warm = os.environ.get("MERCADO_WARM", "1") != "0"
     if warm and store.count_rows():
         threading.Thread(target=forecast.warm, daemon=True, name="mercado-warm").start()
-    if os.environ.get("MERCADO_SCHEDULER", "1") != "0":
-        scheduler.start()
     yield
-    scheduler.stop()
 
 
 app = FastAPI(title="Mercado API", lifespan=lifespan)
@@ -125,27 +113,6 @@ def compare(province: str = "ncr", commodity: str = "rice"):
         return forecast.compare(province, commodity)
     except (ValueError, StopIteration) as e:
         return _err(str(e) or "No comparison available", 422)
-
-
-@API.get("/pipeline")
-def pipe():
-    a = store.available()
-    return dict(dataset=a, scheduler=scheduler.info(), sources=pipeline.SOURCES, runs=pipeline.recent_runs())
-
-
-class PipelineRun(BaseModel):
-    mode: str = "live"
-
-
-@API.post("/pipeline/run")
-def pipe_run(body: PipelineRun | None = None):
-    mode = body.mode if body else "live"
-    if mode not in pipeline.MODES:
-        return _err(f"Unknown mode. Use one of: {', '.join(pipeline.MODES)}", 400)
-    rep = pipeline.run(mode)
-    if rep["status"] == "error" and not rep.get("log"):
-        return JSONResponse(rep, status_code=409)
-    return rep
 
 
 app.include_router(API)

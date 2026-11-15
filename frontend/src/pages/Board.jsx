@@ -7,9 +7,9 @@ import { buildAlerts } from '../alerts'
 import { peso0, pct, fmtDate } from '../util'
 
 export default function Board() {
-  const { province, prov, horizon, t, commodityBy, nav, dataVersion } = useApp()
+  const { province, prov, horizon, t, commodityBy, nav } = useApp()
 
-  const { data, error, loading, reload } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
+  const { data, error, loading, reload } = useApi(`/api/v1/overview?province=${province}`)
   const alerts = useMemo(() => (data ? buildAlerts(data.items, commodityBy, horizon, t) : []), [data, commodityBy, horizon, t])
 
   if (error) return <ErrorBox error={error} retry={reload} />
