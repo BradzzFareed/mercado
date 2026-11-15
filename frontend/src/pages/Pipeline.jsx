@@ -8,8 +8,8 @@ import { fmtDate } from '../util'
 const STATE_LABEL = { implemented: 'Ready', scaffold: 'Scaffold' }
 
 export default function Pipeline() {
-  const { t, bumpData } = useApp()
-  const { data, error, reload } = useApi('/api/v1/pipeline')
+  const { t, bumpData, dataVersion } = useApp()
+  const { data, error, reload } = useApi('/api/v1/pipeline', [dataVersion])
   const [busy, setBusy] = useState(null)
   const [report, setReport] = useState(null)
   const [err, setErr] = useState(null)
