@@ -128,7 +128,7 @@ def generate(end=DEFAULT_END, provinces=None, comms=None):
                 log[i0:] += shock
             price = np.exp(log)
             for d, v in zip(dates, price):
-                rows.append((d, p["id"], p["region"], p["market"], c["id"], round(float(v), 2), "sample"))
+                rows.append((d, p["id"], p["region"], p["market"], c["id"], round(float(v), 2), "synthetic"))
     return pd.DataFrame(rows, columns=["date", "province", "region", "market", "commodity", "price", "source"])
 
 
