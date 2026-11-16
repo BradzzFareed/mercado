@@ -13,6 +13,8 @@ BY_ID = {c["id"]: c for c in COMMODITIES}
 BY_WFP_LABEL = {c["label_wfp"]: c for c in COMMODITIES}
 # Only the legacy 10 carry generator parameters (base, drift, amp, peak, vol).
 SYNTHETIC = [c for c in COMMODITIES if "base" in c]
+# Longest keyword first, so 'eggplant' wins over 'egg' in 'Eggplants'.
+_KEYWORDS = sorted(((k, c["id"]) for c in SYNTHETIC for k in c["keywords"]), key=lambda kv: -len(kv[0]))
 
 PUBLIC_FIELDS = ["id", "name", "short", "fil", "group", "unit", "icon", "typhoon", "fuel", "shelf", "basket",
                  "category", "label_wfp", "unit_label", "scenario"]
@@ -32,9 +34,9 @@ def match_commodity(text):
     t = (text or "").lower()
     if "rice" in t and not any(k in t for k in ("regular", "local")):
         return None  # skip premium / imported varieties so we track one rice grade
-    for c in SYNTHETIC:
-        if any(k in t for k in c["keywords"]):
-            return c["id"]
+    for k, cid in _KEYWORDS:
+        if k in t:
+            return cid
     return None
 
 

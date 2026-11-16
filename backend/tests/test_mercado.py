@@ -59,6 +59,11 @@ def test_wfp_normalizer_handles_hxl_row_and_units():
     assert skipped == 1
 
 
+def test_match_commodity_eggplants_are_not_eggs():
+    assert cm.match_commodity("Eggplants") == "eggplant"
+    assert cm.match_commodity("Eggs") == "eggs"
+
+
 def test_api_endpoints(client):
     meta = client.get("/api/v1/meta").json()
     assert len(meta["provinces"]) >= 20 and len(meta["commodities"]) == len(cm.SYNTHETIC)
