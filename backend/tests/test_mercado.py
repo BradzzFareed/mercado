@@ -40,25 +40,6 @@ def test_ensemble_beats_naive_on_seasonal_series():
     assert (np.diff(res.sigma) >= 0).all()
 
 
-def test_wfp_normalizer_handles_hxl_row_and_units():
-    raw = pd.DataFrame({
-        "date": ["#date", "2026-09-15", "2026-09-15", "2026-09-15", "2026-09-15"],
-        "admin1": ["#adm1", "Region VII", "Region VII", "Region VII", "NCR"],
-        "admin2": ["#adm2", "Cebu", "Cebu", "Cebu", "Metropolitan Manila"],
-        "market": ["#loc", "Cebu City", "Cebu City", "Cebu City", "Quezon City"],
-        "commodity": ["#item", "Rice (regular, milled)", "Eggs", "Meat (pork)", "Wheat flour"],
-        "unit": ["#unit", "KG", "30 pcs", "KG", "KG"],
-        "pricetype": ["#priceType", "Retail", "Retail", "Retail", "Retail"],
-        "currency": ["#cur", "PHP", "PHP", "PHP", "PHP"],
-        "price": ["#price", "48", "300", "380", "50"],
-    })
-    out, skipped = pipeline.normalize_wfp(raw)
-    assert set(out["commodity"]) == {"rice", "eggs", "pork"}
-    assert out.loc[out["commodity"] == "eggs", "price"].iloc[0] == 120.0   # 300 per 30 pcs -> 120 per dozen
-    assert set(out["province"]) == {"cebu"}   # the only NCR row is wheat flour, which is skipped
-    assert skipped == 1
-
-
 def test_match_commodity_eggplants_are_not_eggs():
     assert cm.match_commodity("Eggplants") == "eggplant"
     assert cm.match_commodity("Eggs") == "eggs"

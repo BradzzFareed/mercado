@@ -1,11 +1,14 @@
-"""Automated data pipeline: fetch -> clean & map -> store -> (forecasts retrain lazily).
+"""Automated data pipeline: fetch -> map -> store -> (forecasts retrain lazily).
 
 Modes (see README): live, wfp, inbox, da, simulate, seed.
-  * wfp       WFP Philippines Food Prices from HDX (CKAN API -> CSV). Implemented, needs internet.
-  * inbox     CSVs dropped into data/inbox/ (columns: date, province, commodity, price). Implemented.
+  * wfp       WFP Philippines Food Prices via wfp.py: cheap token check, MD5-verified CSV, registry mapping.
+  * inbox     CSVs dropped into data/inbox/ (columns: date, province, commodity, price; registry ids).
   * da        DA price monitoring: scaffold only (finds report links; PDF parsing is left to implement).
   * simulate  Appends one synthetic week so forecasts can be shown updating offline.
   * seed      Reloads the full synthetic history.
+
+Network and parsing happen first; every mode then writes its data and its pipeline_runs row in one
+transaction, so a failure leaves the database as it was and saves no source token.
 """
 import glob
 import io
@@ -14,16 +17,23 @@ import os
 import re
 import threading
 import urllib.request
-from datetime import date, datetime, timedelta
+from collections import Counter
+from collections.abc import Callable
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
 
+import numpy as np
 import pandas as pd
 
-from . import store, geo, commodities as cm, sample_data, forecast
+from . import store, geo, commodities as cm, sample_data, forecast, wfp
+from .registry import load as load_registry
 
-HDX_API = "https://data.humdata.org/api/3/action/package_show?id=wfp-food-prices-for-philippines"
 DA_URL = "https://www.da.gov.ph/price-monitoring/"
 UA = {"User-Agent": "Mercado-student-project/1.0"}
-REPLACE_MIN_WEEKS = 110          # a live series must be this long to replace a sample series
+REPLACE_MIN_WEEKS = 110          # a series must have this many weekly points to be written as real or inbox
+HISTORY_START = "2019-01-01"     # observations before this date are not stored
+STALE_MONTHS = 3                 # a series whose last observation is older than this stays observations-only
+MULTI_MARKET_RULE = "mean"       # how markets in one province combine into one weekly price
 
 INBOX_DIR = os.path.join(store.DATA_DIR, "inbox")
 LIVE_DIR = os.path.join(store.DATA_DIR, "live")
@@ -37,119 +47,124 @@ SOURCES = [
 MODES = ("live", "wfp", "inbox", "da", "simulate", "seed")
 
 _run_lock = threading.Lock()
+_QUARANTINED = frozenset(r["market"] for r in load_registry("market_rules")["items"] if r["rule"] == "quarantine")
 
 
 # ---------------------------------------------------------------- cleaning
-def _monday(d):
-    d = pd.Timestamp(d).normalize()
-    return d - pd.Timedelta(days=d.weekday())
-
-
-def _unit_factor(unit, target_unit):
-    """Multiply a WFP price by this to get price per Mercado unit (kg or dozen). None = cannot convert."""
-    u = str(unit or "").strip().lower()
-    m = re.match(r"^(\d+(?:\.\d+)?)?\s*(kg|g|pcs?|pieces?|units?|dozen|doz)$", u)
-    if not m:
-        return None
-    qty = float(m.group(1)) if m.group(1) else 1.0
-    kind = m.group(2)
-    if target_unit == "kg":
-        if kind == "kg":
-            return 1.0 / qty
-        if kind == "g":
-            return 1000.0 / qty
-        return None
-    if target_unit == "dozen":
-        if kind.startswith(("pc", "piece", "unit")):
-            return 12.0 / qty
-        if kind.startswith("doz"):
-            return 1.0 / qty
-    return None
+def _monday(dates):
+    d = pd.to_datetime(dates)
+    return d - pd.to_timedelta(d.dt.day_of_week, unit="D")
 
 
 def normalize_wfp(raw: pd.DataFrame):
-    """WFP CSV frame -> weekly Mercado rows. Returns (rows, skipped). Skips the HXL tag row."""
+    """WFP CSV frame -> (observations, stats).
+
+    Retail rows only. Commodity: exact WFP label via commodities.by_wfp_label. Province: registry market
+    rule first, then the admin2 lookup (geo.by_wfp_market). A row the registry cannot place is
+    quarantined and counted by market or pair, never guessed. Units stay native. The HXL tag row is skipped.
+    """
     df = raw.copy()
     df.columns = [str(c).strip().lower() for c in df.columns]
-    need = {"date", "admin1", "commodity", "market", "price", "unit"}
+    need = {"date", "admin2", "market", "commodity", "price", "unit", "pricetype"}
     missing = sorted(need - set(df.columns))
     if missing:
         raise ValueError(f"CSV is missing expected WFP columns: {missing}")
-    df = df[~df["date"].astype(str).str.startswith("#")]
-    if "pricetype" in df.columns:
-        df = df[df["pricetype"].astype(str).str.lower().str.contains("retail")]
-    out, skipped = [], 0
-    for row in df.to_dict("records"):
-        cid = cm.match_commodity(str(row.get("commodity")))
-        pid = geo.match_province(row.get("admin2"), row.get("market"), row.get("admin1"))
-        try:
-            price = float(row.get("price"))
-            when = pd.to_datetime(row.get("date"))
-        except (TypeError, ValueError):
-            skipped += 1
-            continue
-        if cid is None or pid is None or pd.isna(when) or price <= 0:
-            skipped += 1
-            continue
-        f = _unit_factor(row.get("unit"), cm.BY_ID[cid]["unit"])
-        if f is None:
-            skipped += 1
-            continue
-        out.append((_monday(when), pid, cid, price * f))
-    if not out:
-        return pd.DataFrame(columns=["date", "province", "region", "market", "commodity", "price", "source"]), skipped
-    g = pd.DataFrame(out, columns=["date", "province", "commodity", "price"])
-    g = g.groupby(["date", "province", "commodity"], as_index=False)["price"].mean()
-    g["price"] = g["price"].round(2)
-    g["region"] = g["province"].map(lambda p: geo.BY_ID[p]["region"])
-    g["market"] = g["province"].map(lambda p: geo.BY_ID[p]["market"])
-    g["source"] = "wfp"
-    return g[["date", "province", "region", "market", "commodity", "price", "source"]], skipped
+    stats = dict(rows=len(df))
+    hxl = df["date"].astype(str).str.startswith("#")
+    stats["hxl"] = int(hxl.sum())
+    df = df[~hxl]
+    retail = df["pricetype"].astype(str).str.strip().str.lower() == "retail"
+    stats["non_retail"] = int((~retail).sum())
+    df = df[retail]
+    when = pd.to_datetime(df["date"], errors="coerce")
+    price = pd.to_numeric(df["price"], errors="coerce")
+    ok = when.notna() & price.gt(0)
+    stats["invalid"] = int((~ok).sum())
+    df = df[ok].assign(obs_date=when[ok], price=price[ok])
+    stats["max_obs_date"] = df["obs_date"].max().date().isoformat() if len(df) else None
+    early = df["obs_date"] < pd.Timestamp(HISTORY_START)
+    stats["before_history"] = int(early.sum())
+    df = df[~early]
+    commodity_id = df["commodity"].astype(str).map(lambda x: (cm.by_wfp_label(x) or {}).get("id"))
+    unknown = Counter(df.loc[commodity_id.isna(), "commodity"].astype(str))
+    stats["unknown_labels"] = dict(unknown)
+    stats["unknown_label_rows"] = sum(unknown.values())
+    df = df.assign(commodity=commodity_id)[commodity_id.notna()]
+    province, quarantined, unmapped = [], Counter(), Counter()
+    for admin2, market in zip(df["admin2"], df["market"]):
+        pid = geo.by_wfp_market(admin2, market)
+        province.append(pid)
+        if pid is None:
+            name = str(market).strip()
+            if name in _QUARANTINED:
+                quarantined[name] += 1
+            else:
+                unmapped[f"{admin2} / {market}"] += 1
+    df = df.assign(province=province)
+    df = df[df["province"].notna()].assign(market=lambda d: d["market"].astype(str).str.strip())
+    obs = df.groupby(["province", "commodity", "market", "obs_date"], as_index=False).agg(
+        price=("price", "mean"), unit=("unit", "first"))
+    stats["quarantined_rows"] = sum(quarantined.values())
+    stats["quarantined_by_market"] = dict(quarantined)
+    stats["unmapped_rows"] = sum(unmapped.values())
+    stats["unmapped_by_pair"] = dict(unmapped)
+    stats["duplicate_keys_averaged"] = int(len(df) - len(obs))
+    stats["observations"] = len(obs)
+    return obs, stats
 
 
-# ---------------------------------------------------------------- applying
-def apply_live(rows: pd.DataFrame, replace_min_weeks=REPLACE_MIN_WEEKS):
-    """Store live rows. Long series replace the sample series; short ones are skipped (or upserted if
-    replace_min_weeks is None). Returns (rows_added, series_replaced, series_skipped)."""
-    added = replaced = skipped = 0
-    if rows is None or rows.empty:
-        return 0, 0, 0
-    keep = []
-    for (p, c), g in rows.groupby(["province", "commodity"]):
-        weeks = (g["date"].max() - g["date"].min()).days // 7 + 1
-        if replace_min_weeks is None:
-            keep.append(g)
-        elif weeks >= replace_min_weeks:
-            with store._lock, store.connect() as con:
-                con.execute("DELETE FROM prices WHERE province=? AND commodity=?", (p, c))
-            keep.append(g); replaced += 1
+def _price_frame(weekly, pid, cid, source):
+    p = geo.BY_ID[pid]
+    return pd.DataFrame({"date": weekly.index, "province": pid, "region": p["region"], "market": p["market"],
+                         "commodity": cid, "price": weekly.round(2).to_numpy(), "source": source})
+
+
+def _select(df, keys, inside=True):
+    """Rows of df whose (province, commodity) is in keys (or outside them when inside=False)."""
+    wanted = set(keys)
+    mask = np.fromiter(((p, c) in wanted for p, c in zip(df["province"], df["commodity"])), dtype=bool, count=len(df))
+    return df[mask] if inside else df[~mask]
+
+
+@dataclass
+class _WfpPlan:
+    token: object
+    observations: pd.DataFrame
+    real_rows: pd.DataFrame
+    real_keys: list
+    counts: dict
+    stats: dict
+
+
+def build_wfp_plan(raw: pd.DataFrame, token):
+    """Pure: WFP CSV frame -> the observations to store and the weekly series that qualify as real."""
+    obs, stats = normalize_wfp(raw)
+    if obs.empty:
+        raise ValueError("no mappable WFP retail rows since " + HISTORY_START)
+    cutoff = pd.Timestamp(stats["max_obs_date"]) - pd.DateOffset(months=STALE_MONTHS)
+    obs = obs.assign(monday=_monday(obs["obs_date"]))
+    frames, keys = [], []
+    counts = dict(real=0, short=0, stale=0, real_observations=0, short_observations=0, stale_observations=0)
+    for (pid, cid), g in obs.groupby(["province", "commodity"]):
+        weekly = store.interpolate_weekly(pd.Series(g["price"].to_numpy(), index=pd.DatetimeIndex(g["monday"])))
+        if len(weekly) < REPLACE_MIN_WEEKS:
+            kind = "short"
+        elif g["obs_date"].max() < cutoff:
+            kind = "stale"
         else:
-            skipped += 1
-    if keep:
-        added = store.upsert_prices(pd.concat(keep, ignore_index=True))
-    store.invalidate(); forecast.clear_cache()
-    return int(added), replaced, skipped
+            kind = "real"
+            keys.append((pid, cid))
+            frames.append(_price_frame(weekly, pid, cid, "real"))
+        counts[kind] += 1
+        counts[f"{kind}_observations"] += len(g)
+    real_rows = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=store.PRICE_COLS)
+    return _WfpPlan(token=token, observations=obs[store.OBS_COLS], real_rows=real_rows,
+                    real_keys=keys, counts=counts, stats=stats)
 
 
 # ---------------------------------------------------------------- sources
 def _http(url, timeout=40):
     return urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=timeout).read()
-
-
-def fetch_wfp(log):
-    log("Asking HDX for the WFP Philippines dataset…")
-    meta = json.loads(_http(HDX_API))
-    res = [r for r in meta["result"]["resources"] if str(r.get("format", "")).lower() == "csv"]
-    res.sort(key=lambda r: ("phl" not in str(r.get("name", "")).lower(), "qc" in str(r.get("name", "")).lower()))
-    if not res:
-        raise RuntimeError("no CSV resource found in the HDX dataset")
-    url = res[0].get("download_url") or res[0]["url"]
-    log(f"Downloading {url.rsplit('/', 1)[-1]}…")
-    text = _http(url, timeout=120).decode("utf-8", "replace")
-    os.makedirs(LIVE_DIR, exist_ok=True)
-    with open(os.path.join(LIVE_DIR, "wfp_raw.csv"), "w", encoding="utf-8") as fh:
-        fh.write(text)
-    return pd.read_csv(io.StringIO(text), low_memory=False)
 
 
 class DASource:
@@ -166,40 +181,178 @@ class DASource:
         raise NotImplementedError("Implement DA PDF table parsing here and return rows like normalize_wfp().")
 
 
-def read_inbox(log):
+def _stored_wfp_token():
+    """Token of the last successful run that loaded WFP, or None."""
+    with store._lock, store.connect() as con:
+        row = con.execute("SELECT source_token FROM pipeline_runs WHERE status = 'ok' AND source_token IS NOT NULL "
+                          "ORDER BY id DESC LIMIT 1").fetchone()
+    return wfp.RemoteToken(**json.loads(row["source_token"])) if row else None
+
+
+def _prepare_wfp(log):
+    """Returns (load, None), or (None, skip_note) when HDX reports the file unchanged."""
+    log("Asking HDX for the WFP food-prices resource…")
+    remote = wfp.fetch_remote_token()
+    stored = _stored_wfp_token()
+    if not wfp.token_changed(remote, stored):
+        return None, f"Skipped, unchanged: HDX still lists the file modified {remote.last_modified}."
+    log(f"HDX file changed (modified {remote.last_modified}); downloading…")
+    payload = wfp.download_verified(remote)
+    log(f"Downloaded {len(payload):,} bytes; MD5 matches HDX ({remote.hash})")
+    os.makedirs(LIVE_DIR, exist_ok=True)
+    with open(os.path.join(LIVE_DIR, "wfp_raw.csv"), "wb") as fh:
+        fh.write(payload)
+    plan = build_wfp_plan(pd.read_csv(io.BytesIO(payload), low_memory=False), remote)
+    s, c = plan.stats, plan.counts
+    log(f"Retail rows: {s['rows'] - s['hxl'] - s['non_retail']:,} ({s['non_retail']:,} non-retail excluded); "
+        f"{s['before_history']:,} before {HISTORY_START}; {s['invalid']:,} with bad date or price")
+    log(f"Unknown WFP labels skipped: {s['unknown_label_rows']:,} rows, {len(s['unknown_labels'])} labels")
+    log(f"Quarantined by market: {s['quarantined_rows']:,} rows {s['quarantined_by_market']}")
+    log(f"Unmapped (no registry match): {s['unmapped_rows']:,} rows")
+    log(f"Observations: {s['observations']:,}; series real {c['real']}, short {c['short']}, stale {c['stale']}")
+
+    def write(con, lg):
+        store.insert_observations(con, plan.observations)
+        n = store.replace_series(con, plan.real_rows, plan.real_keys)
+        return n, (f"WFP: {c['real']:,} series stored as real ({n:,} weekly prices); "
+                   f"{c['short']} short and {c['stale']} stale series kept as observations only.")
+    return _Load(write=write, token=remote), None
+
+
+def _prepare_inbox(log):
     os.makedirs(INBOX_DIR, exist_ok=True)
     files = sorted(glob.glob(os.path.join(INBOX_DIR, "*.csv")))
-    frames = []
+    if not files:
+        log("Inbox is empty")
+        return None
+    frames, parsed = [], []
     for f in files:
+        name = os.path.basename(f)
         df = pd.read_csv(f)
         df.columns = [c.strip().lower() for c in df.columns]
         miss = {"date", "province", "commodity", "price"} - set(df.columns)
         if miss:
-            log(f"{os.path.basename(f)}: skipped, missing columns {sorted(miss)}")
+            log(f"{name}: skipped, missing columns {sorted(miss)}")
             continue
-        df["province"] = df["province"].map(lambda v: v if v in geo.BY_ID else geo.match_province(v))
-        df["commodity"] = df["commodity"].map(lambda v: v if v in cm.BY_ID else cm.match_commodity(v))
-        bad = df["province"].isna() | df["commodity"].isna() | ~(pd.to_numeric(df["price"], errors="coerce") > 0)
-        if bad.any():
-            log(f"{os.path.basename(f)}: {int(bad.sum())} rows skipped (unknown market/commodity or bad price)")
-        df = df[~bad].copy()
-        df["date"] = df["date"].map(_monday)
-        df["price"] = pd.to_numeric(df["price"]).round(2)
-        df["region"] = df["province"].map(lambda p: geo.BY_ID[p]["region"])
-        df["market"] = df["province"].map(lambda p: geo.BY_ID[p]["market"])
-        df["source"] = "inbox"
-        frames.append(df[["date", "province", "region", "market", "commodity", "price", "source"]])
-        os.replace(f, f + ".done")
-        log(f"{os.path.basename(f)}: {len(df)} rows read")
-    return pd.concat(frames, ignore_index=True) if frames else None
+        known = df["province"].isin(list(geo.BY_ID)) & df["commodity"].isin(list(cm.BY_ID))
+        when = pd.to_datetime(df["date"], errors="coerce")
+        price = pd.to_numeric(df["price"], errors="coerce")
+        ok = known & when.notna() & price.gt(0)
+        log(f"{name}: {int((~known).sum())} rows with unknown ids, {int((known & ~ok).sum())} with bad date or price")
+        frames.append(pd.DataFrame({"province": df.loc[ok, "province"], "commodity": df.loc[ok, "commodity"],
+                                    "monday": _monday(when[ok]), "price": price[ok]}))
+        parsed.append(f)
+    if not frames:
+        log("Inbox: no valid rows in any file")
+        _mark_done(parsed)
+        return None
+    allrows = pd.concat(frames, ignore_index=True)
+    keys, short, parts = [], 0, []
+    for (pid, cid), g in allrows.groupby(["province", "commodity"]):
+        weekly = store.interpolate_weekly(pd.Series(g["price"].to_numpy(), index=pd.DatetimeIndex(g["monday"])))
+        if len(weekly) < REPLACE_MIN_WEEKS:
+            short += 1
+            continue
+        keys.append((pid, cid))
+        parts.append(_price_frame(weekly, pid, cid, "inbox"))
+    rows = pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=store.PRICE_COLS)
+
+    def write(con, lg):
+        real = store.series_keys_with(con, "real")
+        blocked = [k for k in keys if k in real]
+        keep = [k for k in keys if k not in real]
+        n = store.replace_series(con, _select(rows, keep), keep)
+        return n, (f"Inbox: {len(keep)} series stored ({n:,} weekly prices); {len(blocked)} skipped because "
+                   f"real data exists; {short} shorter than {REPLACE_MIN_WEEKS} weeks skipped.")
+    return _Load(write=write, after=lambda: _mark_done(parsed))
+
+
+def _mark_done(paths):
+    """Rename consumed inbox files after a successful commit. A failed rename leaves the file to be re-read,
+    which is harmless because inbox loads replace whole series."""
+    for f in paths:
+        try:
+            os.replace(f, f + ".done")
+        except OSError:
+            pass
+
+
+@dataclass
+class _Load:
+    write: Callable          # (con, log) -> (rows_written, summary); runs inside the run's transaction
+    token: object = None     # RemoteToken recorded on the run row when the transaction commits
+    after: Callable = None   # runs after a successful commit
+
+
+# ---------------------------------------------------------------- applying
+def _simulate_load():
+    def write(con, lg):
+        last = store.max_date(con) or sample_data.DEFAULT_END
+        n = store.upsert_prices(sample_data.next_week_rows(last), con=con)
+        nxt = last + timedelta(weeks=1)
+        return n, f"Added the week of {nxt.isoformat()}: {n} new prices. Forecasts will refresh."
+    return _Load(write=write)
+
+
+def _seed_load():
+    def write(con, lg):
+        con.execute("DELETE FROM prices")
+        n = store.upsert_prices(sample_data.generate(), con=con)
+        return n, f"Reloaded the sample history ({n:,} rows)."
+    return _Load(write=write)
+
+
+def _collect(mode, log, notes, skips):
+    """Network and parsing for each source in this mode. Writes nothing."""
+    if mode == "simulate":
+        return [_simulate_load()]
+    if mode == "seed":
+        return [_seed_load()]
+    loads = []
+    for src in (["wfp", "inbox", "da"] if mode == "live" else [mode]):
+        try:
+            if src == "wfp":
+                load, skip = _prepare_wfp(log)
+                if load:
+                    loads.append(load)
+                if skip:
+                    skips.append(skip)
+                    log(skip)
+            elif src == "inbox":
+                load = _prepare_inbox(log)
+                if load:
+                    loads.append(load)
+            elif src == "da":
+                links = DASource.find_reports()
+                log(f"DA page lists {len(links)} PDF reports; the PDF parser is a scaffold, nothing imported")
+        except Exception as e:  # a failing source must not stop the others
+            notes.append(f"{src}: {type(e).__name__}: {str(e)[:120]}")
+            log(f"{src} failed: {type(e).__name__}: {str(e)[:120]}")
+    return loads
 
 
 # ---------------------------------------------------------------- run
-def _persist(rep):
-    with store._lock, store.connect() as con:
-        con.execute("INSERT INTO pipeline_runs(started, finished, mode, source, status, rows_added, message, log) VALUES (?,?,?,?,?,?,?,?)",
-                    (rep["started"], rep["finished"], rep["mode"], rep["source"], rep["status"], rep["rows_added"],
-                     rep["message"], json.dumps(rep["log"])))
+def _report(started, lines, mode, source, status, added, message):
+    return dict(started=started, finished=datetime.now().isoformat(timespec="seconds"), mode=mode, source=source,
+                status=status, rows_added=int(added), message=message, log=lines)
+
+
+def _record_run(con, rep, token=None):
+    con.execute("INSERT INTO pipeline_runs(started, finished, mode, source, status, rows_added, message, log, source_token) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
+                (rep["started"], rep["finished"], rep["mode"], rep["source"], rep["status"], rep["rows_added"],
+                 rep["message"], json.dumps(rep["log"]), json.dumps(asdict(token)) if token is not None else None))
+
+
+def _save_run(rep):
+    try:
+        with store.transaction() as con:
+            _record_run(con, rep)
+    except Exception:
+        pass
+
+
+def _write_state(rep):
     try:
         os.makedirs(LIVE_DIR, exist_ok=True)
         with open(STATE_PATH, "w") as fh:
@@ -221,66 +374,47 @@ def run(mode="live"):
     def log(msg):
         lines.append(f"{datetime.now().strftime('%H:%M:%S')} {msg}")
 
-    added, source, status, message = 0, mode, "ok", ""
+    source = {"live": "wfp+inbox+da", "simulate": "sample", "seed": "sample"}.get(mode, mode)
+    notes, skips, loads = [], [], []
+    committed = False
+    rep = None
     try:
         store.init_db()
         log(f"Pipeline started ({mode})")
-        if mode == "simulate":
-            last = store.last_date() or sample_data.DEFAULT_END
-            rows = sample_data.next_week_rows(last)
-            added = store.upsert_prices(rows); source = "sample"
-            store.invalidate(); forecast.clear_cache()
-            message = f"Added the week of {(last + timedelta(weeks=1)).isoformat()}: {added} new prices. Forecasts will refresh."
-            log(message)
-        elif mode == "seed":
-            store.reset_prices()
-            added = store.upsert_prices(sample_data.generate()); source = "sample"
-            store.invalidate(); forecast.clear_cache()
-            message = f"Reloaded the sample history ({added:,} rows)."
-            log(message)
-        else:
-            order = ["wfp", "inbox", "da"] if mode == "live" else [mode]
-            notes = []
-            for src in order:
-                try:
-                    if src == "wfp":
-                        raw = fetch_wfp(log)
-                        rows, skipped = normalize_wfp(raw)
-                        log(f"Mapped {len(rows):,} weekly prices ({skipped:,} source rows skipped: unmapped item, market or unit)")
-                        n, rep_n, skip_n = apply_live(rows)
-                        log(f"Stored {n:,} rows; {rep_n} series replaced sample data, {skip_n} too short to replace")
-                        added += n
-                    elif src == "inbox":
-                        rows = read_inbox(log)
-                        if rows is None:
-                            log("Inbox is empty")
-                        else:
-                            n, _, _ = apply_live(rows, replace_min_weeks=None)
-                            log(f"Stored {n:,} new rows from the inbox"); added += n
-                    elif src == "da":
-                        links = DASource.find_reports()
-                        log(f"DA page lists {len(links)} PDF reports; the PDF parser is a scaffold, nothing imported")
-                except Exception as e:  # a failing source must not stop the others
-                    notes.append(f"{src}: {type(e).__name__}")
-                    log(f"{src} failed: {type(e).__name__}: {str(e)[:120]}")
-            source = "+".join(order) if mode == "live" else mode
-            if added:
-                message = f"Stored {added:,} new prices."
+        loads = _collect(mode, log, notes, skips)
+        with store.transaction() as con:
+            added, texts, token = 0, [], None
+            for load in loads:
+                n, text = load.write(con, log)
+                added += n
+                texts.append(text)
+                if load.token is not None:
+                    token = load.token
+            if loads:
+                status = "ok"
+                message = " ".join(texts + ([f"Sources failed: {', '.join(notes)}."] if notes else []))
             else:
                 status = "no_update"
-                message = "No new data. " + ("Sources unreachable or empty (" + ", ".join(notes) + "); kept the existing data." if notes else "Nothing new to import.")
-        log("Done")
+                message = "; ".join(skips) if skips else "No new data. " + (
+                    "Sources unreachable or empty (" + ", ".join(notes) + "); kept the existing data." if notes else "Nothing new to import.")
+            log("Done")
+            rep = _report(started, lines, mode, source, status, added, message)
+            _record_run(con, rep, token)
+        committed = True
     except Exception as e:
         status, message = "error", f"{type(e).__name__}: {e}"
         log("Failed: " + message)
+        rep = _report(started, lines, mode, source, status, 0, message)
+        _save_run(rep)
     finally:
         _run_lock.release()
-    rep = dict(started=started, finished=datetime.now().isoformat(timespec="seconds"), mode=mode, source=source,
-               status=status, rows_added=int(added), message=message, log=lines)
-    try:
-        _persist(rep)
-    except Exception:
-        pass
+    if committed:
+        if loads:
+            forecast.clear_cache()
+        for load in loads:
+            if load.after:
+                load.after()
+    _write_state(rep)
     return rep
 
 
