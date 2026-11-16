@@ -1,12 +1,15 @@
 /* eslint-disable react-refresh/only-export-components -- this module exports the app context and data hooks */
 /* eslint-disable react-hooks/set-state-in-effect -- the fetch hooks intentionally reset state when the path changes */
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
-import { get } from './api'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { clearCache, get, invalidate } from './api'
 import { translate } from './i18n'
 import { store, save } from './util'
 
 const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
+
+// Poll cadence for detecting external data changes (scheduler or other clients).
+const META_POLL_MS = 60_000
 
 // ---- hash router: #/board, #/commodity/rice, #/map, #/planner, #/whatif, #/pipeline
 function parseHash() {
@@ -24,6 +27,15 @@ export function AppProvider({ children }) {
   const [lang, setLang] = useState(store('mercado.lang', 'en'))
   const [theme, setTheme] = useState(store('mercado.theme', null))
   const [dataVersion, setDataVersion] = useState(0)
+  // Latest data_version the app has applied; a ref so polling never re-renders or restarts itself.
+  const seenDataVersion = useRef(null)
+  const metaLoadInFlight = useRef(false)
+
+  // Stable identity so consumers can safely put bumpData in dependency arrays.
+  const bumpData = useCallback(() => {
+    clearCache()
+    setDataVersion((v) => v + 1)
+  }, [])
 
   useEffect(() => {
     const on = () => setRoute(parseHash())
@@ -33,9 +45,46 @@ export function AppProvider({ children }) {
 
   const loadMeta = useCallback(() => {
     setMetaError(null)
-    get('/api/v1/meta', { fresh: true }).then(setMeta).catch((e) => setMetaError(e.message))
+    metaLoadInFlight.current = true
+    get('/api/v1/meta', { fresh: true })
+      .then((m) => {
+        if (m?.data_version) seenDataVersion.current = m.data_version
+        setMeta(m)
+      })
+      .catch((e) => setMetaError(e.message))
+      .finally(() => { metaLoadInFlight.current = false })
   }, [])
   useEffect(loadMeta, [loadMeta, dataVersion])
+
+  // Background poll: bump dataVersion (which flushes the cache) when /meta's data_version
+  // changes outside this tab, e.g. a scheduler run or a pipeline run from another client.
+  useEffect(() => {
+    let timer = null
+    let polling = false
+
+    const check = () => {
+      if (polling || metaLoadInFlight.current || document.visibilityState === 'hidden') return
+      polling = true
+      get('/api/v1/meta', { fresh: true })
+        .then((m) => {
+          const v = m?.data_version
+          if (!v || v === seenDataVersion.current) return
+          seenDataVersion.current = v
+          bumpData()
+        }, (e) => console.debug('Mercado: data_version poll failed', e.message))
+        .finally(() => { polling = false })
+    }
+
+    const start = () => { if (timer === null) timer = window.setInterval(check, META_POLL_MS) }
+    const stop = () => { if (timer !== null) { window.clearInterval(timer); timer = null } }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') { check(); start() } else stop()
+    }
+
+    if (document.visibilityState === 'visible') start()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => { stop(); document.removeEventListener('visibilitychange', onVisibility) }
+  }, [bumpData])
 
   useEffect(() => save('mercado.province', province), [province])
   useEffect(() => save('mercado.horizon', horizon), [horizon])
@@ -54,7 +103,7 @@ export function AppProvider({ children }) {
 
   const value = {
     route, nav, meta, metaError, loadMeta, province: prov ? prov.id : province, prov, setProvince, horizon, setHorizon,
-    lang, setLang, theme, setTheme, t, commodityBy, bumpData: () => setDataVersion((v) => v + 1), dataVersion,
+    lang, setLang, theme, setTheme, t, commodityBy, bumpData, dataVersion,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
@@ -67,12 +116,12 @@ export function useApi(path, deps = []) {
     if (!path) return
     let alive = true
     setState((s) => ({ ...s, loading: true, error: null }))
-    get(path, { fresh: tick > 0 }).then(
+    get(path).then(
       (data) => alive && setState({ data, error: null, loading: false }),
       (error) => alive && setState({ data: null, error: error.message, loading: false }),
     )
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, tick, ...deps])
-  return { ...state, reload: () => setTick((x) => x + 1) }
+  return { ...state, reload: () => { invalidate(path); setTick((x) => x + 1) } }
 }

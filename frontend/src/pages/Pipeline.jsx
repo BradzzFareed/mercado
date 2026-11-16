@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApp, useApi } from '../state'
-import { clearCache, post } from '../api'
+import { post } from '../api'
 import { PageHead, ErrorBox } from '../components/Common'
 import { IconPlay, IconRefresh } from '../components/Icons'
 import { fmtDate } from '../util'
@@ -8,8 +8,8 @@ import { fmtDate } from '../util'
 const STATE_LABEL = { implemented: 'Ready', scaffold: 'Scaffold' }
 
 export default function Pipeline() {
-  const { t, bumpData } = useApp()
-  const { data, error, reload } = useApi('/api/v1/pipeline')
+  const { t, bumpData, dataVersion } = useApp()
+  const { data, error, reload } = useApi('/api/v1/pipeline', [dataVersion])
   const [busy, setBusy] = useState(null)
   const [report, setReport] = useState(null)
   const [err, setErr] = useState(null)
@@ -19,8 +19,12 @@ export default function Pipeline() {
     try {
       const r = await post('/api/v1/pipeline/run', { mode })
       setReport(r)
-      clearCache(); bumpData(); reload()
-    } catch (e) { setErr(e.message) } finally { setBusy(null) }
+      bumpData(); reload()
+    } catch (e) {
+      setErr(e.message)
+      // No HTTP response: the run may have completed server-side, so refresh defensively.
+      if (e.cause && !e.cause.response) bumpData()
+    } finally { setBusy(null) }
   }
   if (error) return <ErrorBox error={error} retry={reload} />
   if (!data) return <p className="muted">{t('common.loading')}</p>

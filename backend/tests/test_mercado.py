@@ -81,3 +81,19 @@ def test_pipeline_simulate_adds_a_week_and_changes_data(client):
 def test_live_mode_degrades_gracefully_offline(client):
     rep = client.post("/api/v1/pipeline/run", json={"mode": "live"}).json()
     assert rep["status"] in ("ok", "no_update")
+
+
+def test_meta_data_version_changes_after_pipeline_run(client):
+    first = client.get("/api/v1/meta").json()
+    assert isinstance(first["data_version"], str) and first["data_version"]
+
+    again = client.get("/api/v1/meta").json()          # stable with no run in between
+    assert again["data_version"] == first["data_version"]
+    assert again["last_updated"] == first["last_updated"]
+
+    rep = client.post("/api/v1/pipeline/run", json={"mode": "simulate"}).json()
+    assert rep["status"] == "ok"
+
+    after = client.get("/api/v1/meta").json()
+    assert after["data_version"] != first["data_version"]
+    assert after["last_updated"] >= first["last_updated"]

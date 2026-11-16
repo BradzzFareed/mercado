@@ -86,7 +86,7 @@ def meta():
     regions = [dict(r, provinces=[x for x in r["provinces"] if x in avail]) for r in geo.regions()]
     regions = [r for r in regions if r["provinces"]]
     return dict(provinces=provs, regions=regions, commodities=cm.public(), dishes=cm.dishes(),
-                horizons=list(forecast.HORIZONS), data=a)
+                horizons=list(forecast.HORIZONS), data=a, **pipeline.version_info())
 
 
 @API.get("/overview")
