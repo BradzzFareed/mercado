@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     warm = os.environ.get("MERCADO_WARM", "1") != "0"
     if warm and store.count_rows():
         threading.Thread(target=forecast.warm, daemon=True, name="mercado-warm").start()
-    if os.environ.get("MERCADO_SCHEDULER", "1") != "0":
+    if os.environ.get("MERCADO_SCHEDULER") == "1":
         scheduler.start()
     yield
     scheduler.stop()

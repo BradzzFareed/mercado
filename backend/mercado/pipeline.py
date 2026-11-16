@@ -287,18 +287,21 @@ class _Load:
 # ---------------------------------------------------------------- applying
 def _simulate_load():
     def write(con, lg):
-        last = store.max_date(con) or sample_data.DEFAULT_END
-        n = store.upsert_prices(sample_data.next_week_rows(last), con=con)
+        last = store.max_date(con, "synthetic") or sample_data.DEFAULT_END
+        rows = _select(sample_data.next_week_rows(last), store.synthetic_only_keys(con))
+        n = store.upsert_prices(rows, con=con)
         nxt = last + timedelta(weeks=1)
-        return n, f"Added the week of {nxt.isoformat()}: {n} new prices. Forecasts will refresh."
+        return n, (f"Added the week of {nxt.isoformat()}: {n} synthetic prices. Series that hold real data were left alone. "
+                   "Forecasts will refresh.")
     return _Load(write=write)
 
 
 def _seed_load():
     def write(con, lg):
-        con.execute("DELETE FROM prices")
-        n = store.upsert_prices(sample_data.generate(), con=con)
-        return n, f"Reloaded the sample history ({n:,} rows)."
+        store.delete_source(con, "synthetic")
+        taken = store.series_keys_with(con, "real", "inbox")
+        n = store.upsert_prices(_select(sample_data.generate(), taken, inside=False), con=con)
+        return n, f"Reloaded the synthetic history ({n:,} rows). Real and inbox data were left alone."
     return _Load(write=write)
 
 
