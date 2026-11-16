@@ -2,7 +2,7 @@
 
 > **How to use this file:** upload it as-is to an LLM to give it working context for this repository. It describes the code as it exists today. If this document and the code disagree, the code wins — fix the document.
 >
-> **Last reviewed:** 2026-11-08 against the code. Backend tests: `6 passed`.
+> **Last reviewed:** 2026-11-17 against the code. Backend tests: `44 passed`.
 
 ---
 
@@ -57,8 +57,9 @@ mercado/
 │   │   ├── forecast.py            # result cache, signals, horizon blocks, overview/detail/map/compare, warm()
 │   │   ├── pipeline.py            # live / wfp / inbox / da / simulate / seed ingestion and run log
 │   │   ├── scheduler.py           # background thread that re-runs the pipeline
-│   │   ├── commodities.py         # 10 commodities, 6 carinderia dishes
-│   │   └── geo.py                 # 25 provinces, 16 regions, haversine distance, name matching
+│   │   ├── commodities.py         # registry-backed: 70 WFP commodities (10 synthetic), 6 carinderia dishes
+│   │   ├── registry/              # commodities.json, provinces.json, market_rules.json (identity data)
+│   │   └── geo.py                 # registry-backed: 82 provinces (25 synthetic), regions, haversine, name matching
 │   ├── data/                      # GITIGNORED, generated: mercado.db, live/, inbox/
 │   └── tests/
 │       └── test_mercado.py        # 6 pytest tests via fastapi.testclient
@@ -120,7 +121,7 @@ CORS allows only `http://localhost:5173` and `http://127.0.0.1:5173`. All featur
 | Method | Path | Handler | Returns |
 |---|---|---|---|
 | GET | `/api/v1/health` | `health` | `{status, rows, as_of}` |
-| GET | `/api/v1/meta` | `meta` | `{provinces[], regions[], commodities[], dishes[], horizons[], data}`; provinces are filtered to those present in the DB |
+| GET | `/api/v1/meta` | `meta` | `{provinces[], regions[], commodities[], provinces_without_data[], dishes[], horizons[], data, data_version, last_updated}`; provinces and commodities are filtered to those present in the DB. Field contract in §12 |
 | GET | `/api/v1/overview?province=` | `overview` | `{province, as_of, items[10], basket}`; each item is a `forecast.summary()` |
 | GET | `/api/v1/forecast?province=&commodity=` | `fc` | `forecast.detail()` payload |
 | GET | `/api/v1/map?commodity=` | `pmap` | `{rows[]}`, one per available province |
@@ -141,8 +142,8 @@ CORS allows only `http://localhost:5173` and `http://127.0.0.1:5173`. All featur
 | `forecast.py` | Result cache keyed by `(kind, mode, province, commodity)` with a version counter. `HORIZONS = (7, 14, 30)`. Public functions: `summary`, `overview`, `detail`, `seasonality`, `price_map`, `compare`, `warm`, `clear_cache`. `summary(..., allow_quick=True)` may use the quick model for series without a full ensemble yet. |
 | `pipeline.py` | `MODES = ("live", "wfp", "inbox", "da", "simulate", "seed")`. `run(mode)` never raises; failures come back as `status: "error"`. A non-blocking `_run_lock` prevents concurrent runs. `normalize_wfp` skips the HXL tag row, filters to retail, converts units to kg or dozen, and matches commodities and provinces. `fetch_wfp`, `read_inbox`, `apply_live`, `recent_runs`. |
 | `scheduler.py` | Daemon thread on `MERCADO_REFRESH_HOURS` (default 24). Functions: `start(interval_hours=None)`, `stop()`, `info()`. |
-| `commodities.py` | `COMMODITIES` (10: rice, pork, chicken, eggs, bangus, tomato, onion, calamansi, cabbage, eggplant) with display metadata, typhoon and fuel sensitivities, and shelf life. `DISHES` (6) with per-serving ingredient amounts. `BY_ID`, `public()`, `match_commodity()`, `dishes()`. |
-| `geo.py` | `PROVINCES` (25) with region, representative market, coordinates, and aliases. `BY_ID`, `regions()` (16), `match_province()`, `haversine_km()`. |
+| `commodities.py` | Loads `registry/commodities.json`. `COMMODITIES` (70, every WFP retail label), `SYNTHETIC` (the 10 legacy commodities with generator parameters), `BY_ID`, `BY_WFP_LABEL`, `by_wfp_label()`, `public()`, `match_commodity()` (matches `SYNTHETIC` only), `DISHES` (6) with per-serving ingredient amounts, `dishes()`. |
+| `geo.py` | Loads `registry/provinces.json` and `registry/market_rules.json`. `PROVINCES` (82), `SYNTHETIC_PROVINCES` (the 25 legacy), `BY_ID`, `regions()`, `match_province()` (legacy aliases only; ingest still uses it), `by_wfp_market()` (market rules first, then the WFP admin2 lookup), `haversine_km()`. |
 
 ### 4.4 Forecast semantics
 
@@ -332,3 +333,64 @@ These are declared in `pyproject.toml` for planned model work. They are intentio
 | HXL | Humanitarian Exchange Language; WFP CSVs carry a leading `#`-tag row that must be skipped |
 | Ensemble | Inverse-squared-error weighted blend of naive, Holt-Winters, Ridge, and GBM |
 | σ (sigma) | Backtest residual standard deviation in log space; drives the 80% band and the signal threshold |
+
+---
+
+## 12. API contract v2
+
+This contract covers `GET /api/v1/meta`. Changes from v1 are additive: existing field names, types and error shapes stay the same. Defaults apply when a registry entry has no value, so clients can rely on them.
+
+**Filtering.** `commodities[]` and `provinces[]` list only what has rows in the store. The registry is larger than the store (70 commodities and 82 provinces in the registry, 10 and 25 seeded).
+
+### 12.1 `meta.commodities[]`
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `id` | string | none | Slug. Legacy ids are `rice`, `pork`, `chicken`, `eggs`, `bangus`, `tomato`, `onion`, `calamansi`, `cabbage`, `eggplant`. Other ids are slugs of the WFP label, and the WFP label `Chicken` is `chicken-generic`. |
+| `name` | string | none | Display name. For new entries this is the WFP label. |
+| `short` | string | none | Short display name. |
+| `fil` | string or null | `null` | Filipino name. Null for new entries. |
+| `group` | string | none | One of: `Grains`, `Meat & Poultry`, `Fish`, `Vegetables & Fruit`, `Roots & Tubers`, `Seafood`, `Pulses & Nuts`, `Oils & Fats`, `Sugar & Sweeteners`. |
+| `unit` | string | none | `kg`, `dozen` (legacy eggs), `piece` (`Eggs (duck)`), or `750 ml` (`Oil (cooking)`). |
+| `icon` | string or null | `null` | Emoji. |
+| `typhoon` | number | `0` | What-If sensitivity. `0` means no scenario effect. |
+| `fuel` | number | `0` | What-If sensitivity. `0` means no scenario effect. |
+| `shelf` | number | `0` | Shelf life used for stockability. `0` means unknown. |
+| `basket` | number | `0` | Weight in the palengke basket. `0` excludes the commodity from the basket. |
+| `category` | string | none | WFP category, verbatim (for example `vegetables and fruits`). |
+| `label_wfp` | string | none | Exact WFP retail label. Unique across commodities. |
+| `unit_label` | string | none | Display unit: `kg`, `dozen`, `piece`, or `750 ml`. |
+| `scenario` | boolean | `false` | `true` only where explicit sensitivities exist (the legacy 10). |
+
+### 12.2 `meta.provinces[]`
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `id` | string | none | Legacy ids are kept (25). Other ids are slugs of the official name (for example `davao-de-oro`). |
+| `name` | string | none | Official name. Legacy names are unchanged. |
+| `region_code` | string | none | Roman numeral (`I`..`XIII`), `NCR`, `CAR`, `BARMM`, or the legacy `MIMAROPA`. |
+| `region` | string | none | Legacy region names are unchanged. New entries use the WFP admin1 name with casing normalized, so `Region IV-B` is not rewritten. |
+| `market` | string or null | none | Representative market. Null for `batanes`. |
+| `lat`, `lon` | number | none | Coordinates. |
+| `confidence` | `high` or `UNCERTAIN` | `high` | `UNCERTAIN` marks a region-label or coordinate doubt. See the registry `_meta`. |
+
+### 12.3 Other `meta` fields
+
+- `provinces_without_data[]`: `{id, name, region}` for each registry province with no rows. Clients can use it to show coverage gaps.
+- `regions[]`: groups over the stored provinces only (unchanged).
+- `commodities` is ordered as the registry is (legacy first).
+- `data_version` and `last_updated`: unchanged, from `pipeline.version_info()`.
+- `dishes`, `horizons`, `data`: unchanged.
+
+### 12.4 Planned additions (not implemented; do not depend on them yet)
+
+These are planned for the ingest and tiering steps. They are not in the code today.
+
+- **Commodity `source`** (planned): where the price series comes from, for example `wfp`.
+- **Commodity `tier`** (planned): `forecast`, `history` or `discontinued`, computed from the data at ingest.
+- **Commodity `native_step`** (planned): cadence of the source observations before weekly resampling (for example `monthly` for WFP).
+- **Commodity `horizons`** (planned): per-commodity horizon list. Today `horizons` is global at the top level.
+
+### 12.5 Errors
+
+Unchanged. Domain failures return `{error}`, and `HTTPException` returns `{detail}`. Requests for a commodity that is in the registry but has no rows return 404 on `/forecast`, `/map` and `/compare`, as unknown ids do.

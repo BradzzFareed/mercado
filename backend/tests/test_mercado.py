@@ -76,6 +76,25 @@ def test_api_endpoints(client):
     assert client.get("/api/v1/forecast?province=nope&commodity=rice").status_code == 404
 
 
+def test_meta_contract_v2(client):
+    meta = client.get("/api/v1/meta").json()
+    stored = {p["id"] for p in meta["provinces"]}
+    without = meta["provinces_without_data"]
+    assert {p["id"] for p in without} == {p["id"] for p in geo.PROVINCES} - stored
+    assert len(without) == len(geo.PROVINCES) - len(geo.SYNTHETIC_PROVINCES)
+    assert set(without[0]) == {"id", "name", "region"}
+    assert [c["id"] for c in meta["commodities"]] == [c["id"] for c in cm.SYNTHETIC]
+    assert set(meta["commodities"][0]) == set(cm.PUBLIC_FIELDS)
+    assert all(p["confidence"] in ("high", "UNCERTAIN") for p in meta["provinces"])
+    assert meta["data_version"] and "last_updated" in meta
+
+
+def test_registered_commodity_without_data_is_not_found(client):
+    assert client.get("/api/v1/forecast?province=ncr&commodity=bitter-melon").status_code == 404
+    assert client.get("/api/v1/compare?province=ncr&commodity=bitter-melon").status_code == 404
+    assert client.get("/api/v1/map?commodity=bitter-melon").status_code == 404
+
+
 def test_pipeline_simulate_adds_a_week_and_changes_data(client):
     before = store.last_date()
     rep = client.post("/api/v1/pipeline/run", json={"mode": "simulate"}).json()
