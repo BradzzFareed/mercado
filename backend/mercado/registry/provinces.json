@@ -1,0 +1,1368 @@
+{
+  "_meta": {
+    "generated_from": "generated once from the audit CSVs; legacy values copied verbatim from backend/mercado/geo.py at 6eaeba5",
+    "source_csv": "wfp_http.csv (HDX resource 9a842d72-0d7d-4922-ad0e-eb8106c1ab0e)",
+    "source_csv_md5": "2440ab74363fb321d317430b09b72453",
+    "audit_date": "2026-11-16",
+    "sources": [
+      "~/mercado_audit/dl/wfp_http.csv (MD5 2440ab74363fb321d317430b09b72453)",
+      "~/mercado_audit/universe/ (commodity_universe.csv, admin2.csv, admin2_to_official.csv, market_checks.csv, REPORT_UNIVERSE.md)",
+      "~/mercado_audit/markets/REPORT_MARKETS.md",
+      "BetterGov PSA geography dimension, as recorded in REPORT_UNIVERSE.md §4"
+    ],
+    "scope": "82 = 78 WFP admin2 provinces incl. Camarines Sur + Metropolitan Manila (ncr) + Pampanga + Batanes + Davao Occidental",
+    "legacy": "25 legacy ids and fields unchanged; wfp_admin2, confidence, coords_source added",
+    "names": "new entries use the official PSA label from admin2_to_official.csv (Davao de Oro, Western Samar, Dinagat Island, Saranggani); WFP labels are in wfp_admin2 and aliases",
+    "region": "new entries use WFP admin1 with casing fixed only (National Capital Region, Cordillera Administrative Region, Autonomous Region in Muslim Mindanao); Region IV-B is not rewritten to MIMAROPA",
+    "region_code": "roman numeral of the WFP admin1; Autonomous Region in Muslim Mindanao = BARMM; legacy codes unchanged",
+    "coords": "new entries: coordinates of the representative WFP market (market_checks.csv); Batanes: manual 20.45, 121.97 (no WFP data); Davao Occidental: its WFP market",
+    "market": "representative market: the market named after the province, else the first alphabetically, excluding markets assigned or quarantined elsewhere by market_rules.json; null for Batanes",
+    "level": "1.0 for new entries; used only by the synthetic generator (legacy values unchanged)",
+    "confidence": "high | UNCERTAIN. UNCERTAIN: Region IV-B label lag (Marinduque, Occidental Mindoro, Romblon, and legacy Oriental Mindoro and Palawan, which carry MIMAROPA); maguindanao (2022 split); davao-occidental (absent from the PSA dimension, market-derived coordinates); batanes (manual coordinates, no data)",
+    "wfp_admin2": "the WFP admin2 label that resolves to this province; null for Pampanga, Batanes, Davao Occidental"
+  },
+  "items": [
+    {
+      "id": "ncr",
+      "name": "Metro Manila",
+      "region_code": "NCR",
+      "region": "National Capital Region",
+      "market": "Commonwealth Market, Quezon City",
+      "lat": 14.676,
+      "lon": 121.075,
+      "level": 1.0,
+      "aliases": [
+        "metro manila",
+        "national capital region",
+        "ncr",
+        "manila",
+        "metropolitan manila"
+      ],
+      "wfp_admin2": "Metropolitan Manila",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "benguet",
+      "name": "Benguet",
+      "region_code": "CAR",
+      "region": "Cordillera Administrative Region",
+      "market": "La Trinidad Trading Post",
+      "lat": 16.455,
+      "lon": 120.59,
+      "level": 0.93,
+      "aliases": [
+        "benguet",
+        "baguio",
+        "baguio city"
+      ],
+      "wfp_admin2": "Benguet",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "pangasinan",
+      "name": "Pangasinan",
+      "region_code": "I",
+      "region": "Ilocos Region",
+      "market": "Dagupan City Public Market",
+      "lat": 16.043,
+      "lon": 120.333,
+      "level": 0.95,
+      "aliases": [
+        "pangasinan",
+        "dagupan"
+      ],
+      "wfp_admin2": "Pangasinan",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "ilocos-norte",
+      "name": "Ilocos Norte",
+      "region_code": "I",
+      "region": "Ilocos Region",
+      "market": "Laoag City Public Market",
+      "lat": 18.198,
+      "lon": 120.594,
+      "level": 0.97,
+      "aliases": [
+        "ilocos norte",
+        "laoag"
+      ],
+      "wfp_admin2": "Ilocos Norte",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "pampanga",
+      "name": "Pampanga",
+      "region_code": "III",
+      "region": "Central Luzon",
+      "market": "San Fernando Public Market",
+      "lat": 15.029,
+      "lon": 120.689,
+      "level": 0.97,
+      "aliases": [
+        "pampanga"
+      ],
+      "wfp_admin2": null,
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "bulacan",
+      "name": "Bulacan",
+      "region_code": "III",
+      "region": "Central Luzon",
+      "market": "Malolos Public Market",
+      "lat": 14.843,
+      "lon": 120.811,
+      "level": 0.98,
+      "aliases": [
+        "bulacan"
+      ],
+      "wfp_admin2": "Bulacan",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "laguna",
+      "name": "Laguna",
+      "region_code": "IV-A",
+      "region": "CALABARZON",
+      "market": "Calamba Public Market",
+      "lat": 14.211,
+      "lon": 121.165,
+      "level": 0.99,
+      "aliases": [
+        "laguna"
+      ],
+      "wfp_admin2": "Laguna",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "cavite",
+      "name": "Cavite",
+      "region_code": "IV-A",
+      "region": "CALABARZON",
+      "market": "Dasmarinas Public Market",
+      "lat": 14.329,
+      "lon": 120.937,
+      "level": 1.0,
+      "aliases": [
+        "cavite"
+      ],
+      "wfp_admin2": "Cavite",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "batangas",
+      "name": "Batangas",
+      "region_code": "IV-A",
+      "region": "CALABARZON",
+      "market": "Batangas City Public Market",
+      "lat": 13.756,
+      "lon": 121.058,
+      "level": 0.98,
+      "aliases": [
+        "batangas"
+      ],
+      "wfp_admin2": "Batangas",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "or-mindoro",
+      "name": "Oriental Mindoro",
+      "region_code": "MIMAROPA",
+      "region": "MIMAROPA",
+      "market": "Calapan Public Market",
+      "lat": 13.411,
+      "lon": 121.18,
+      "level": 1.03,
+      "aliases": [
+        "oriental mindoro"
+      ],
+      "wfp_admin2": "Oriental Mindoro",
+      "confidence": "UNCERTAIN",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "palawan",
+      "name": "Palawan",
+      "region_code": "MIMAROPA",
+      "region": "MIMAROPA",
+      "market": "Puerto Princesa Public Market",
+      "lat": 9.739,
+      "lon": 118.735,
+      "level": 1.1,
+      "aliases": [
+        "palawan"
+      ],
+      "wfp_admin2": "Palawan",
+      "confidence": "UNCERTAIN",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "albay",
+      "name": "Albay",
+      "region_code": "V",
+      "region": "Bicol Region",
+      "market": "Legazpi City Public Market",
+      "lat": 13.139,
+      "lon": 123.744,
+      "level": 1.0,
+      "aliases": [
+        "albay",
+        "legazpi"
+      ],
+      "wfp_admin2": "Albay",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "camarines-sur",
+      "name": "Camarines Sur",
+      "region_code": "V",
+      "region": "Bicol Region",
+      "market": "Naga City Public Market",
+      "lat": 13.622,
+      "lon": 123.195,
+      "level": 0.99,
+      "aliases": [
+        "camarines sur",
+        "naga"
+      ],
+      "wfp_admin2": "Camarines Sur",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "iloilo",
+      "name": "Iloilo",
+      "region_code": "VI",
+      "region": "Western Visayas",
+      "market": "Iloilo Central Market",
+      "lat": 10.697,
+      "lon": 122.564,
+      "level": 0.98,
+      "aliases": [
+        "iloilo",
+        "iloilo city"
+      ],
+      "wfp_admin2": "Iloilo",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "negros-occ",
+      "name": "Negros Occidental",
+      "region_code": "VI",
+      "region": "Western Visayas",
+      "market": "Bacolod Central Market",
+      "lat": 10.676,
+      "lon": 122.951,
+      "level": 0.97,
+      "aliases": [
+        "negros occidental",
+        "bacolod"
+      ],
+      "wfp_admin2": "Negros Occidental",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "cebu",
+      "name": "Cebu",
+      "region_code": "VII",
+      "region": "Central Visayas",
+      "market": "Carbon Market, Cebu City",
+      "lat": 10.292,
+      "lon": 123.902,
+      "level": 1.02,
+      "aliases": [
+        "cebu",
+        "cebu city"
+      ],
+      "wfp_admin2": "Cebu",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "bohol",
+      "name": "Bohol",
+      "region_code": "VII",
+      "region": "Central Visayas",
+      "market": "Tagbilaran City Market",
+      "lat": 9.648,
+      "lon": 123.855,
+      "level": 1.05,
+      "aliases": [
+        "bohol",
+        "tagbilaran"
+      ],
+      "wfp_admin2": "Bohol",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "leyte",
+      "name": "Leyte",
+      "region_code": "VIII",
+      "region": "Eastern Visayas",
+      "market": "Tacloban City Market",
+      "lat": 11.244,
+      "lon": 125.003,
+      "level": 1.04,
+      "aliases": [
+        "leyte",
+        "tacloban"
+      ],
+      "wfp_admin2": "Leyte",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "zamboanga-sur",
+      "name": "Zamboanga del Sur",
+      "region_code": "IX",
+      "region": "Zamboanga Peninsula",
+      "market": "Pagadian City Market",
+      "lat": 7.826,
+      "lon": 123.437,
+      "level": 1.02,
+      "aliases": [
+        "zamboanga del sur",
+        "zamboanga",
+        "zamboanga city"
+      ],
+      "wfp_admin2": "Zamboanga del Sur",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "misamis-or",
+      "name": "Misamis Oriental",
+      "region_code": "X",
+      "region": "Northern Mindanao",
+      "market": "Cagayan de Oro Cogon Market",
+      "lat": 8.477,
+      "lon": 124.647,
+      "level": 0.96,
+      "aliases": [
+        "misamis oriental",
+        "cagayan de oro"
+      ],
+      "wfp_admin2": "Misamis Oriental",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "davao-sur",
+      "name": "Davao del Sur",
+      "region_code": "XI",
+      "region": "Davao Region",
+      "market": "Bankerohan Public Market, Davao City",
+      "lat": 7.065,
+      "lon": 125.608,
+      "level": 0.97,
+      "aliases": [
+        "davao del sur",
+        "davao",
+        "davao city"
+      ],
+      "wfp_admin2": "Davao del Sur",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "south-cotabato",
+      "name": "South Cotabato",
+      "region_code": "XII",
+      "region": "SOCCSKSARGEN",
+      "market": "General Santos City Market",
+      "lat": 6.112,
+      "lon": 125.172,
+      "level": 0.94,
+      "aliases": [
+        "south cotabato",
+        "general santos",
+        "koronadal"
+      ],
+      "wfp_admin2": "South Cotabato",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "agusan-norte",
+      "name": "Agusan del Norte",
+      "region_code": "XIII",
+      "region": "Caraga",
+      "market": "Butuan City Public Market",
+      "lat": 8.949,
+      "lon": 125.541,
+      "level": 1.0,
+      "aliases": [
+        "agusan del norte",
+        "butuan"
+      ],
+      "wfp_admin2": "Agusan del Norte",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "lanao-sur",
+      "name": "Lanao del Sur",
+      "region_code": "BARMM",
+      "region": "Bangsamoro (BARMM)",
+      "market": "Marawi City Market",
+      "lat": 7.998,
+      "lon": 124.294,
+      "level": 1.06,
+      "aliases": [
+        "lanao del sur",
+        "marawi"
+      ],
+      "wfp_admin2": "Lanao del Sur",
+      "confidence": "high",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "maguindanao",
+      "name": "Maguindanao",
+      "region_code": "BARMM",
+      "region": "Bangsamoro (BARMM)",
+      "market": "Cotabato City Market",
+      "lat": 7.223,
+      "lon": 124.246,
+      "level": 1.04,
+      "aliases": [
+        "maguindanao",
+        "cotabato",
+        "cotabato city"
+      ],
+      "wfp_admin2": "Maguindanao",
+      "confidence": "UNCERTAIN",
+      "coords_source": "legacy"
+    },
+    {
+      "id": "abra",
+      "name": "Abra",
+      "region_code": "CAR",
+      "region": "Cordillera Administrative Region",
+      "market": "Abra",
+      "lat": 17.6,
+      "lon": 120.62,
+      "level": 1.0,
+      "aliases": [
+        "abra"
+      ],
+      "wfp_admin2": "Abra",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "agusan-del-sur",
+      "name": "Agusan del Sur",
+      "region_code": "XIII",
+      "region": "Region XIII",
+      "market": "Agusan del Sur",
+      "lat": 8.61,
+      "lon": 125.91,
+      "level": 1.0,
+      "aliases": [
+        "agusan del sur"
+      ],
+      "wfp_admin2": "Agusan del Sur",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "aklan",
+      "name": "Aklan",
+      "region_code": "VI",
+      "region": "Region VI",
+      "market": "Aklan",
+      "lat": 11.71,
+      "lon": 122.37,
+      "level": 1.0,
+      "aliases": [
+        "aklan"
+      ],
+      "wfp_admin2": "Aklan",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "antique",
+      "name": "Antique",
+      "region_code": "VI",
+      "region": "Region VI",
+      "market": "Antique",
+      "lat": 10.76,
+      "lon": 121.94,
+      "level": 1.0,
+      "aliases": [
+        "antique"
+      ],
+      "wfp_admin2": "Antique",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "apayao",
+      "name": "Apayao",
+      "region_code": "CAR",
+      "region": "Cordillera Administrative Region",
+      "market": "Apayao",
+      "lat": 18.01,
+      "lon": 121.19,
+      "level": 1.0,
+      "aliases": [
+        "apayao"
+      ],
+      "wfp_admin2": "Apayao",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "aurora",
+      "name": "Aurora",
+      "region_code": "III",
+      "region": "Region III",
+      "market": "Aurora",
+      "lat": 15.75,
+      "lon": 121.56,
+      "level": 1.0,
+      "aliases": [
+        "aurora"
+      ],
+      "wfp_admin2": "Aurora",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "basilan",
+      "name": "Basilan",
+      "region_code": "BARMM",
+      "region": "Autonomous Region in Muslim Mindanao",
+      "market": "Basilan",
+      "lat": 6.66,
+      "lon": 122.14,
+      "level": 1.0,
+      "aliases": [
+        "basilan"
+      ],
+      "wfp_admin2": "Basilan",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "bataan",
+      "name": "Bataan",
+      "region_code": "III",
+      "region": "Region III",
+      "market": "Bataan",
+      "lat": 14.67,
+      "lon": 120.53,
+      "level": 1.0,
+      "aliases": [
+        "bataan"
+      ],
+      "wfp_admin2": "Bataan",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "biliran",
+      "name": "Biliran",
+      "region_code": "VIII",
+      "region": "Region VIII",
+      "market": "Biliran",
+      "lat": 11.56,
+      "lon": 124.39,
+      "level": 1.0,
+      "aliases": [
+        "biliran"
+      ],
+      "wfp_admin2": "Biliran",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "bukidnon",
+      "name": "Bukidnon",
+      "region_code": "X",
+      "region": "Region X",
+      "market": "Bukidnon",
+      "lat": 8.15,
+      "lon": 125.13,
+      "level": 1.0,
+      "aliases": [
+        "bukidnon"
+      ],
+      "wfp_admin2": "Bukidnon",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "cagayan",
+      "name": "Cagayan",
+      "region_code": "II",
+      "region": "Region II",
+      "market": "Cagayan",
+      "lat": 17.63,
+      "lon": 121.73,
+      "level": 1.0,
+      "aliases": [
+        "cagayan"
+      ],
+      "wfp_admin2": "Cagayan",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "camarines-norte",
+      "name": "Camarines Norte",
+      "region_code": "V",
+      "region": "Region V",
+      "market": "Camarines Norte",
+      "lat": 14.12,
+      "lon": 122.96,
+      "level": 1.0,
+      "aliases": [
+        "camarines norte"
+      ],
+      "wfp_admin2": "Camarines Norte",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "camiguin",
+      "name": "Camiguin",
+      "region_code": "X",
+      "region": "Region X",
+      "market": "Camiguin",
+      "lat": 9.25,
+      "lon": 124.72,
+      "level": 1.0,
+      "aliases": [
+        "camiguin"
+      ],
+      "wfp_admin2": "Camiguin",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "capiz",
+      "name": "Capiz",
+      "region_code": "VI",
+      "region": "Region VI",
+      "market": "Capiz",
+      "lat": 11.58,
+      "lon": 122.76,
+      "level": 1.0,
+      "aliases": [
+        "capiz"
+      ],
+      "wfp_admin2": "Capiz",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "catanduanes",
+      "name": "Catanduanes",
+      "region_code": "V",
+      "region": "Region V",
+      "market": "Catanduanes",
+      "lat": 13.58,
+      "lon": 124.23,
+      "level": 1.0,
+      "aliases": [
+        "catanduanes"
+      ],
+      "wfp_admin2": "Catanduanes",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "davao-de-oro",
+      "name": "Davao de Oro",
+      "region_code": "XI",
+      "region": "Region XI",
+      "market": "Davao de Oro",
+      "lat": 7.6,
+      "lon": 125.97,
+      "level": 1.0,
+      "aliases": [
+        "davao de oro",
+        "compostela valley"
+      ],
+      "wfp_admin2": "Compostela Valley",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "davao-oriental",
+      "name": "Davao Oriental",
+      "region_code": "XI",
+      "region": "Region XI",
+      "market": "Davao Oriental",
+      "lat": 6.96,
+      "lon": 126.21,
+      "level": 1.0,
+      "aliases": [
+        "davao oriental"
+      ],
+      "wfp_admin2": "Davao Oriental",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "davao-del-norte",
+      "name": "Davao del Norte",
+      "region_code": "XI",
+      "region": "Region XI",
+      "market": "Davao del Norte",
+      "lat": 7.45,
+      "lon": 125.8,
+      "level": 1.0,
+      "aliases": [
+        "davao del norte"
+      ],
+      "wfp_admin2": "Davao del Norte",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "dinagat-island",
+      "name": "Dinagat Island",
+      "region_code": "XIII",
+      "region": "Region XIII",
+      "market": "Dinagat Islands",
+      "lat": 10.01,
+      "lon": 125.57,
+      "level": 1.0,
+      "aliases": [
+        "dinagat island",
+        "dinagat islands"
+      ],
+      "wfp_admin2": "Dinagat Islands",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "eastern-samar",
+      "name": "Eastern Samar",
+      "region_code": "VIII",
+      "region": "Region VIII",
+      "market": "Eastern Samar",
+      "lat": 11.61,
+      "lon": 125.43,
+      "level": 1.0,
+      "aliases": [
+        "eastern samar"
+      ],
+      "wfp_admin2": "Eastern Samar",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "guimaras",
+      "name": "Guimaras",
+      "region_code": "VI",
+      "region": "Region VI",
+      "market": "Guimaras",
+      "lat": 10.67,
+      "lon": 122.59,
+      "level": 1.0,
+      "aliases": [
+        "guimaras"
+      ],
+      "wfp_admin2": "Guimaras",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "ifugao",
+      "name": "Ifugao",
+      "region_code": "CAR",
+      "region": "Cordillera Administrative Region",
+      "market": "Ifugao",
+      "lat": 16.8,
+      "lon": 121.12,
+      "level": 1.0,
+      "aliases": [
+        "ifugao"
+      ],
+      "wfp_admin2": "Ifugao",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "ilocos-sur",
+      "name": "Ilocos Sur",
+      "region_code": "I",
+      "region": "Region I",
+      "market": "Ilocos Sur",
+      "lat": 17.57,
+      "lon": 120.38,
+      "level": 1.0,
+      "aliases": [
+        "ilocos sur"
+      ],
+      "wfp_admin2": "Ilocos Sur",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "isabela",
+      "name": "Isabela",
+      "region_code": "II",
+      "region": "Region II",
+      "market": "Isabela",
+      "lat": 17.13,
+      "lon": 121.87,
+      "level": 1.0,
+      "aliases": [
+        "isabela"
+      ],
+      "wfp_admin2": "Isabela",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "kalinga",
+      "name": "Kalinga",
+      "region_code": "CAR",
+      "region": "Cordillera Administrative Region",
+      "market": "Kalinga",
+      "lat": 17.47,
+      "lon": 121.47,
+      "level": 1.0,
+      "aliases": [
+        "kalinga"
+      ],
+      "wfp_admin2": "Kalinga",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "la-union",
+      "name": "La Union",
+      "region_code": "I",
+      "region": "Region I",
+      "market": "La Union (Ilocos Region)",
+      "lat": 16.62,
+      "lon": 120.31,
+      "level": 1.0,
+      "aliases": [
+        "la union"
+      ],
+      "wfp_admin2": "La Union",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "lanao-del-norte",
+      "name": "Lanao del Norte",
+      "region_code": "X",
+      "region": "Region X",
+      "market": "Lanao del Norte",
+      "lat": 8.04,
+      "lon": 123.8,
+      "level": 1.0,
+      "aliases": [
+        "lanao del norte"
+      ],
+      "wfp_admin2": "Lanao del Norte",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "marinduque",
+      "name": "Marinduque",
+      "region_code": "IV-B",
+      "region": "Region IV-B",
+      "market": "Marinduque",
+      "lat": 13.45,
+      "lon": 121.84,
+      "level": 1.0,
+      "aliases": [
+        "marinduque"
+      ],
+      "wfp_admin2": "Marinduque",
+      "confidence": "UNCERTAIN",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "masbate",
+      "name": "Masbate",
+      "region_code": "V",
+      "region": "Region V",
+      "market": "Masbate",
+      "lat": 12.36,
+      "lon": 123.63,
+      "level": 1.0,
+      "aliases": [
+        "masbate"
+      ],
+      "wfp_admin2": "Masbate",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "misamis-occidental",
+      "name": "Misamis Occidental",
+      "region_code": "X",
+      "region": "Region X",
+      "market": "Misamis Occidental",
+      "lat": 8.48,
+      "lon": 123.81,
+      "level": 1.0,
+      "aliases": [
+        "misamis occidental"
+      ],
+      "wfp_admin2": "Misamis Occidental",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "mountain-province",
+      "name": "Mountain Province",
+      "region_code": "CAR",
+      "region": "Cordillera Administrative Region",
+      "market": "Mountain Province",
+      "lat": 17.09,
+      "lon": 120.98,
+      "level": 1.0,
+      "aliases": [
+        "mountain province"
+      ],
+      "wfp_admin2": "Mountain Province",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "negros-oriental",
+      "name": "Negros Oriental",
+      "region_code": "VII",
+      "region": "Region VII",
+      "market": "Negros Oriental",
+      "lat": 9.31,
+      "lon": 123.31,
+      "level": 1.0,
+      "aliases": [
+        "negros oriental"
+      ],
+      "wfp_admin2": "Negros Oriental",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "north-cotabato",
+      "name": "North Cotabato",
+      "region_code": "XII",
+      "region": "Region XII",
+      "market": "Cotabato",
+      "lat": 7.01,
+      "lon": 125.09,
+      "level": 1.0,
+      "aliases": [
+        "north cotabato"
+      ],
+      "wfp_admin2": "North Cotabato",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "northern-samar",
+      "name": "Northern Samar",
+      "region_code": "VIII",
+      "region": "Region VIII",
+      "market": "Northern Samar",
+      "lat": 12.5,
+      "lon": 124.64,
+      "level": 1.0,
+      "aliases": [
+        "northern samar"
+      ],
+      "wfp_admin2": "Northern Samar",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "nueva-ecija",
+      "name": "Nueva Ecija",
+      "region_code": "III",
+      "region": "Region III",
+      "market": "Nueva Ecija",
+      "lat": 15.55,
+      "lon": 121.09,
+      "level": 1.0,
+      "aliases": [
+        "nueva ecija"
+      ],
+      "wfp_admin2": "Nueva Ecija",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "nueva-vizcaya",
+      "name": "Nueva Vizcaya",
+      "region_code": "II",
+      "region": "Region II",
+      "market": "Nueva Vizcaya",
+      "lat": 16.49,
+      "lon": 121.15,
+      "level": 1.0,
+      "aliases": [
+        "nueva vizcaya"
+      ],
+      "wfp_admin2": "Nueva Vizcaya",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "occidental-mindoro",
+      "name": "Occidental Mindoro",
+      "region_code": "IV-B",
+      "region": "Region IV-B",
+      "market": "Occidental Mindoro",
+      "lat": 13.23,
+      "lon": 120.59,
+      "level": 1.0,
+      "aliases": [
+        "occidental mindoro"
+      ],
+      "wfp_admin2": "Occidental Mindoro",
+      "confidence": "UNCERTAIN",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "quezon",
+      "name": "Quezon",
+      "region_code": "IV-A",
+      "region": "Region IV-A",
+      "market": "Quezon",
+      "lat": 13.93,
+      "lon": 121.61,
+      "level": 1.0,
+      "aliases": [
+        "quezon"
+      ],
+      "wfp_admin2": "Quezon",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "quirino",
+      "name": "Quirino",
+      "region_code": "II",
+      "region": "Region II",
+      "market": "Quirino",
+      "lat": 16.52,
+      "lon": 121.52,
+      "level": 1.0,
+      "aliases": [
+        "quirino"
+      ],
+      "wfp_admin2": "Quirino",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "rizal",
+      "name": "Rizal",
+      "region_code": "IV-A",
+      "region": "Region IV-A",
+      "market": "Rizal",
+      "lat": 14.59,
+      "lon": 121.17,
+      "level": 1.0,
+      "aliases": [
+        "rizal"
+      ],
+      "wfp_admin2": "Rizal",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "romblon",
+      "name": "Romblon",
+      "region_code": "IV-B",
+      "region": "Region IV-B",
+      "market": "Romblon",
+      "lat": 12.58,
+      "lon": 122.27,
+      "level": 1.0,
+      "aliases": [
+        "romblon"
+      ],
+      "wfp_admin2": "Romblon",
+      "confidence": "UNCERTAIN",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "western-samar",
+      "name": "Western Samar",
+      "region_code": "VIII",
+      "region": "Region VIII",
+      "market": "Samar",
+      "lat": 11.77,
+      "lon": 124.88,
+      "level": 1.0,
+      "aliases": [
+        "western samar",
+        "samar"
+      ],
+      "wfp_admin2": "Samar",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "saranggani",
+      "name": "Saranggani",
+      "region_code": "XII",
+      "region": "Region XII",
+      "market": "Sarangani",
+      "lat": 6.1,
+      "lon": 125.29,
+      "level": 1.0,
+      "aliases": [
+        "saranggani",
+        "sarangani"
+      ],
+      "wfp_admin2": "Sarangani",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "siquijor",
+      "name": "Siquijor",
+      "region_code": "VII",
+      "region": "Region VII",
+      "market": "Siquijor",
+      "lat": 9.21,
+      "lon": 123.51,
+      "level": 1.0,
+      "aliases": [
+        "siquijor"
+      ],
+      "wfp_admin2": "Siquijor",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "sorsogon",
+      "name": "Sorsogon",
+      "region_code": "V",
+      "region": "Region V",
+      "market": "Sorsogon",
+      "lat": 12.97,
+      "lon": 124.01,
+      "level": 1.0,
+      "aliases": [
+        "sorsogon"
+      ],
+      "wfp_admin2": "Sorsogon",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "southern-leyte",
+      "name": "Southern Leyte",
+      "region_code": "VIII",
+      "region": "Region VIII",
+      "market": "Southern Leyte",
+      "lat": 10.13,
+      "lon": 124.83,
+      "level": 1.0,
+      "aliases": [
+        "southern leyte"
+      ],
+      "wfp_admin2": "Southern Leyte",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "sultan-kudarat",
+      "name": "Sultan Kudarat",
+      "region_code": "XII",
+      "region": "Region XII",
+      "market": "Sultan Kudarat",
+      "lat": 6.63,
+      "lon": 124.6,
+      "level": 1.0,
+      "aliases": [
+        "sultan kudarat"
+      ],
+      "wfp_admin2": "Sultan Kudarat",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "sulu",
+      "name": "Sulu",
+      "region_code": "BARMM",
+      "region": "Autonomous Region in Muslim Mindanao",
+      "market": "Sulu",
+      "lat": 6.05,
+      "lon": 121.0,
+      "level": 1.0,
+      "aliases": [
+        "sulu"
+      ],
+      "wfp_admin2": "Sulu",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "surigao-del-norte",
+      "name": "Surigao del Norte",
+      "region_code": "XIII",
+      "region": "Region XIII",
+      "market": "Surigao del Norte",
+      "lat": 9.79,
+      "lon": 125.5,
+      "level": 1.0,
+      "aliases": [
+        "surigao del norte"
+      ],
+      "wfp_admin2": "Surigao del Norte",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "surigao-del-sur",
+      "name": "Surigao del Sur",
+      "region_code": "XIII",
+      "region": "Region XIII",
+      "market": "Surigao del Sur",
+      "lat": 9.06,
+      "lon": 126.2,
+      "level": 1.0,
+      "aliases": [
+        "surigao del sur"
+      ],
+      "wfp_admin2": "Surigao del Sur",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "tarlac",
+      "name": "Tarlac",
+      "region_code": "III",
+      "region": "Region III",
+      "market": "Tarlac",
+      "lat": 15.49,
+      "lon": 120.59,
+      "level": 1.0,
+      "aliases": [
+        "tarlac"
+      ],
+      "wfp_admin2": "Tarlac",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "tawi-tawi",
+      "name": "Tawi-Tawi",
+      "region_code": "BARMM",
+      "region": "Autonomous Region in Muslim Mindanao",
+      "market": "Tawi-Tawi",
+      "lat": 5.03,
+      "lon": 119.77,
+      "level": 1.0,
+      "aliases": [
+        "tawi-tawi"
+      ],
+      "wfp_admin2": "Tawi-Tawi",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "zambales",
+      "name": "Zambales",
+      "region_code": "III",
+      "region": "Region III",
+      "market": "Zambales",
+      "lat": 15.34,
+      "lon": 119.97,
+      "level": 1.0,
+      "aliases": [
+        "zambales"
+      ],
+      "wfp_admin2": "Zambales",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "zamboanga-sibugay",
+      "name": "Zamboanga Sibugay",
+      "region_code": "IX",
+      "region": "Region IX",
+      "market": "Zamboanga Sibugay",
+      "lat": 7.78,
+      "lon": 122.58,
+      "level": 1.0,
+      "aliases": [
+        "zamboanga sibugay"
+      ],
+      "wfp_admin2": "Zamboanga Sibugay",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "zamboanga-del-norte",
+      "name": "Zamboanga del Norte",
+      "region_code": "IX",
+      "region": "Region IX",
+      "market": "Zamboanga del Norte",
+      "lat": 8.59,
+      "lon": 123.34,
+      "level": 1.0,
+      "aliases": [
+        "zamboanga del norte"
+      ],
+      "wfp_admin2": "Zamboanga del Norte",
+      "confidence": "high",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "davao-occidental",
+      "name": "Davao Occidental",
+      "region_code": "XI",
+      "region": "Region XI",
+      "market": "Davao Occidental",
+      "lat": 6.41,
+      "lon": 125.61,
+      "level": 1.0,
+      "aliases": [
+        "davao occidental"
+      ],
+      "wfp_admin2": null,
+      "confidence": "UNCERTAIN",
+      "coords_source": "wfp-market"
+    },
+    {
+      "id": "batanes",
+      "name": "Batanes",
+      "region_code": "II",
+      "region": "Region II",
+      "market": null,
+      "lat": 20.45,
+      "lon": 121.97,
+      "level": 1.0,
+      "aliases": [
+        "batanes"
+      ],
+      "wfp_admin2": null,
+      "confidence": "UNCERTAIN",
+      "coords_source": "manual"
+    }
+  ]
+}

@@ -59,11 +59,16 @@ def test_wfp_normalizer_handles_hxl_row_and_units():
     assert skipped == 1
 
 
+def test_match_commodity_eggplants_are_not_eggs():
+    assert cm.match_commodity("Eggplants") == "eggplant"
+    assert cm.match_commodity("Eggs") == "eggs"
+
+
 def test_api_endpoints(client):
     meta = client.get("/api/v1/meta").json()
-    assert len(meta["provinces"]) >= 20 and len(meta["commodities"]) == 10
+    assert len(meta["provinces"]) >= 20 and len(meta["commodities"]) == len(cm.SYNTHETIC)
     ov = client.get("/api/v1/overview?province=ncr").json()
-    assert len(ov["items"]) == 10
+    assert len(ov["items"]) == len(cm.SYNTHETIC)
     assert all(i["horizons"]["14"]["signal"] in ("dip", "surge", "stable") for i in ov["items"])
     d = client.get("/api/v1/forecast?province=ncr&commodity=tomato").json()
     assert len(d["forecast"]) == 5 and d["forecast"][0]["lo"] < d["forecast"][0]["price"] < d["forecast"][0]["hi"]
@@ -71,10 +76,29 @@ def test_api_endpoints(client):
     assert client.get("/api/v1/forecast?province=nope&commodity=rice").status_code == 404
 
 
+def test_meta_contract_v2(client):
+    meta = client.get("/api/v1/meta").json()
+    stored = {p["id"] for p in meta["provinces"]}
+    without = meta["provinces_without_data"]
+    assert {p["id"] for p in without} == {p["id"] for p in geo.PROVINCES} - stored
+    assert len(without) == len(geo.PROVINCES) - len(geo.SYNTHETIC_PROVINCES)
+    assert set(without[0]) == {"id", "name", "region"}
+    assert [c["id"] for c in meta["commodities"]] == [c["id"] for c in cm.SYNTHETIC]
+    assert set(meta["commodities"][0]) == set(cm.PUBLIC_FIELDS)
+    assert all(p["confidence"] in ("high", "UNCERTAIN") for p in meta["provinces"])
+    assert meta["data_version"] and "last_updated" in meta
+
+
+def test_registered_commodity_without_data_is_not_found(client):
+    assert client.get("/api/v1/forecast?province=ncr&commodity=bitter-melon").status_code == 404
+    assert client.get("/api/v1/compare?province=ncr&commodity=bitter-melon").status_code == 404
+    assert client.get("/api/v1/map?commodity=bitter-melon").status_code == 404
+
+
 def test_pipeline_simulate_adds_a_week_and_changes_data(client):
     before = store.last_date()
     rep = client.post("/api/v1/pipeline/run", json={"mode": "simulate"}).json()
-    assert rep["status"] == "ok" and rep["rows_added"] == len(geo.PROVINCES) * len(cm.COMMODITIES)
+    assert rep["status"] == "ok" and rep["rows_added"] == len(geo.SYNTHETIC_PROVINCES) * len(cm.SYNTHETIC)
     assert (store.last_date() - before).days == 7
 
 

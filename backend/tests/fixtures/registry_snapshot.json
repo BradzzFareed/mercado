@@ -1,0 +1,650 @@
+{
+ "_source": "legacy_commodities and legacy_provinces are copied from backend/mercado/commodities.py and geo.py at 6eaeba5 (before the registry). wfp_retail_labels is the 70 retail labels in ~/mercado_audit/universe/commodity_universe.csv (MD5 2440ab74363fb321d317430b09b72453 source).",
+ "legacy_commodities": [
+  {
+   "id": "rice",
+   "name": "Rice (regular milled)",
+   "short": "Rice",
+   "fil": "Bigas",
+   "group": "Grains",
+   "unit": "kg",
+   "icon": "🍚",
+   "base": 40,
+   "drift": 0.035,
+   "amp": 0.02,
+   "peak": 38,
+   "vol": 0.006,
+   "typhoon": 0.35,
+   "fuel": 0.2,
+   "shelf": 180,
+   "basket": 5.0,
+   "keywords": [
+    "rice (regular, milled)",
+    "rice (regular",
+    "regular milled",
+    "rice (local"
+   ]
+  },
+  {
+   "id": "pork",
+   "name": "Pork belly (liempo)",
+   "short": "Pork belly",
+   "fil": "Liempo",
+   "group": "Meat & Poultry",
+   "unit": "kg",
+   "icon": "🥩",
+   "base": 250,
+   "drift": 0.05,
+   "amp": 0.05,
+   "peak": 51,
+   "vol": 0.01,
+   "typhoon": 0.15,
+   "fuel": 0.35,
+   "shelf": 3,
+   "basket": 1.0,
+   "keywords": [
+    "pork",
+    "meat (pork"
+   ]
+  },
+  {
+   "id": "chicken",
+   "name": "Dressed chicken",
+   "short": "Chicken",
+   "fil": "Manok",
+   "group": "Meat & Poultry",
+   "unit": "kg",
+   "icon": "🍗",
+   "base": 150,
+   "drift": 0.03,
+   "amp": 0.03,
+   "peak": 49,
+   "vol": 0.009,
+   "typhoon": 0.2,
+   "fuel": 0.4,
+   "shelf": 2,
+   "basket": 1.5,
+   "keywords": [
+    "chicken",
+    "meat (chicken"
+   ]
+  },
+  {
+   "id": "eggs",
+   "name": "Eggs (medium)",
+   "short": "Eggs",
+   "fil": "Itlog",
+   "group": "Meat & Poultry",
+   "unit": "dozen",
+   "icon": "🥚",
+   "base": 85,
+   "drift": 0.04,
+   "amp": 0.03,
+   "peak": 49,
+   "vol": 0.008,
+   "typhoon": 0.1,
+   "fuel": 0.3,
+   "shelf": 14,
+   "basket": 1.0,
+   "keywords": [
+    "eggs",
+    "egg"
+   ]
+  },
+  {
+   "id": "bangus",
+   "name": "Milkfish (bangus)",
+   "short": "Bangus",
+   "fil": "Bangus",
+   "group": "Fish",
+   "unit": "kg",
+   "icon": "🐟",
+   "base": 140,
+   "drift": 0.045,
+   "amp": 0.04,
+   "peak": 14,
+   "vol": 0.012,
+   "typhoon": 0.8,
+   "fuel": 0.45,
+   "shelf": 2,
+   "basket": 1.0,
+   "keywords": [
+    "milkfish",
+    "bangus",
+    "fish (milkfish"
+   ]
+  },
+  {
+   "id": "tomato",
+   "name": "Tomatoes",
+   "short": "Tomatoes",
+   "fil": "Kamatis",
+   "group": "Vegetables & Fruit",
+   "unit": "kg",
+   "icon": "🍅",
+   "base": 45,
+   "drift": 0.02,
+   "amp": 0.28,
+   "peak": 36,
+   "vol": 0.035,
+   "typhoon": 1.6,
+   "fuel": 0.25,
+   "shelf": 5,
+   "basket": 0.5,
+   "keywords": [
+    "tomato"
+   ]
+  },
+  {
+   "id": "onion",
+   "name": "Red onions",
+   "short": "Onions",
+   "fil": "Sibuyas",
+   "group": "Vegetables & Fruit",
+   "unit": "kg",
+   "icon": "🧅",
+   "base": 80,
+   "drift": 0.03,
+   "amp": 0.12,
+   "peak": 6,
+   "vol": 0.03,
+   "typhoon": 0.7,
+   "fuel": 0.2,
+   "shelf": 30,
+   "basket": 0.5,
+   "keywords": [
+    "onion"
+   ]
+  },
+  {
+   "id": "calamansi",
+   "name": "Calamansi",
+   "short": "Calamansi",
+   "fil": "Kalamansi",
+   "group": "Vegetables & Fruit",
+   "unit": "kg",
+   "icon": "🍋",
+   "base": 55,
+   "drift": 0.035,
+   "amp": 0.2,
+   "peak": 8,
+   "vol": 0.03,
+   "typhoon": 0.8,
+   "fuel": 0.25,
+   "shelf": 10,
+   "basket": 0.2,
+   "keywords": [
+    "calamansi",
+    "calamondin"
+   ]
+  },
+  {
+   "id": "cabbage",
+   "name": "Cabbage",
+   "short": "Cabbage",
+   "fil": "Repolyo",
+   "group": "Vegetables & Fruit",
+   "unit": "kg",
+   "icon": "🥬",
+   "base": 50,
+   "drift": 0.02,
+   "amp": 0.25,
+   "peak": 33,
+   "vol": 0.03,
+   "typhoon": 1.5,
+   "fuel": 0.3,
+   "shelf": 7,
+   "basket": 0.5,
+   "keywords": [
+    "cabbage"
+   ]
+  },
+  {
+   "id": "eggplant",
+   "name": "Eggplant (talong)",
+   "short": "Eggplant",
+   "fil": "Talong",
+   "group": "Vegetables & Fruit",
+   "unit": "kg",
+   "icon": "🍆",
+   "base": 55,
+   "drift": 0.025,
+   "amp": 0.22,
+   "peak": 36,
+   "vol": 0.03,
+   "typhoon": 1.3,
+   "fuel": 0.25,
+   "shelf": 4,
+   "basket": 0.5,
+   "keywords": [
+    "eggplant",
+    "aubergine"
+   ]
+  }
+ ],
+ "legacy_provinces": [
+  {
+   "id": "ncr",
+   "name": "Metro Manila",
+   "region_code": "NCR",
+   "region": "National Capital Region",
+   "market": "Commonwealth Market, Quezon City",
+   "lat": 14.676,
+   "lon": 121.075,
+   "level": 1.0,
+   "aliases": [
+    "metro manila",
+    "national capital region",
+    "ncr",
+    "manila",
+    "metropolitan manila"
+   ]
+  },
+  {
+   "id": "benguet",
+   "name": "Benguet",
+   "region_code": "CAR",
+   "region": "Cordillera Administrative Region",
+   "market": "La Trinidad Trading Post",
+   "lat": 16.455,
+   "lon": 120.59,
+   "level": 0.93,
+   "aliases": [
+    "benguet",
+    "baguio",
+    "baguio city"
+   ]
+  },
+  {
+   "id": "pangasinan",
+   "name": "Pangasinan",
+   "region_code": "I",
+   "region": "Ilocos Region",
+   "market": "Dagupan City Public Market",
+   "lat": 16.043,
+   "lon": 120.333,
+   "level": 0.95,
+   "aliases": [
+    "pangasinan",
+    "dagupan"
+   ]
+  },
+  {
+   "id": "ilocos-norte",
+   "name": "Ilocos Norte",
+   "region_code": "I",
+   "region": "Ilocos Region",
+   "market": "Laoag City Public Market",
+   "lat": 18.198,
+   "lon": 120.594,
+   "level": 0.97,
+   "aliases": [
+    "ilocos norte",
+    "laoag"
+   ]
+  },
+  {
+   "id": "pampanga",
+   "name": "Pampanga",
+   "region_code": "III",
+   "region": "Central Luzon",
+   "market": "San Fernando Public Market",
+   "lat": 15.029,
+   "lon": 120.689,
+   "level": 0.97,
+   "aliases": [
+    "pampanga"
+   ]
+  },
+  {
+   "id": "bulacan",
+   "name": "Bulacan",
+   "region_code": "III",
+   "region": "Central Luzon",
+   "market": "Malolos Public Market",
+   "lat": 14.843,
+   "lon": 120.811,
+   "level": 0.98,
+   "aliases": [
+    "bulacan"
+   ]
+  },
+  {
+   "id": "laguna",
+   "name": "Laguna",
+   "region_code": "IV-A",
+   "region": "CALABARZON",
+   "market": "Calamba Public Market",
+   "lat": 14.211,
+   "lon": 121.165,
+   "level": 0.99,
+   "aliases": [
+    "laguna"
+   ]
+  },
+  {
+   "id": "cavite",
+   "name": "Cavite",
+   "region_code": "IV-A",
+   "region": "CALABARZON",
+   "market": "Dasmarinas Public Market",
+   "lat": 14.329,
+   "lon": 120.937,
+   "level": 1.0,
+   "aliases": [
+    "cavite"
+   ]
+  },
+  {
+   "id": "batangas",
+   "name": "Batangas",
+   "region_code": "IV-A",
+   "region": "CALABARZON",
+   "market": "Batangas City Public Market",
+   "lat": 13.756,
+   "lon": 121.058,
+   "level": 0.98,
+   "aliases": [
+    "batangas"
+   ]
+  },
+  {
+   "id": "or-mindoro",
+   "name": "Oriental Mindoro",
+   "region_code": "MIMAROPA",
+   "region": "MIMAROPA",
+   "market": "Calapan Public Market",
+   "lat": 13.411,
+   "lon": 121.18,
+   "level": 1.03,
+   "aliases": [
+    "oriental mindoro"
+   ]
+  },
+  {
+   "id": "palawan",
+   "name": "Palawan",
+   "region_code": "MIMAROPA",
+   "region": "MIMAROPA",
+   "market": "Puerto Princesa Public Market",
+   "lat": 9.739,
+   "lon": 118.735,
+   "level": 1.1,
+   "aliases": [
+    "palawan"
+   ]
+  },
+  {
+   "id": "albay",
+   "name": "Albay",
+   "region_code": "V",
+   "region": "Bicol Region",
+   "market": "Legazpi City Public Market",
+   "lat": 13.139,
+   "lon": 123.744,
+   "level": 1.0,
+   "aliases": [
+    "albay",
+    "legazpi"
+   ]
+  },
+  {
+   "id": "camarines-sur",
+   "name": "Camarines Sur",
+   "region_code": "V",
+   "region": "Bicol Region",
+   "market": "Naga City Public Market",
+   "lat": 13.622,
+   "lon": 123.195,
+   "level": 0.99,
+   "aliases": [
+    "camarines sur",
+    "naga"
+   ]
+  },
+  {
+   "id": "iloilo",
+   "name": "Iloilo",
+   "region_code": "VI",
+   "region": "Western Visayas",
+   "market": "Iloilo Central Market",
+   "lat": 10.697,
+   "lon": 122.564,
+   "level": 0.98,
+   "aliases": [
+    "iloilo",
+    "iloilo city"
+   ]
+  },
+  {
+   "id": "negros-occ",
+   "name": "Negros Occidental",
+   "region_code": "VI",
+   "region": "Western Visayas",
+   "market": "Bacolod Central Market",
+   "lat": 10.676,
+   "lon": 122.951,
+   "level": 0.97,
+   "aliases": [
+    "negros occidental",
+    "bacolod"
+   ]
+  },
+  {
+   "id": "cebu",
+   "name": "Cebu",
+   "region_code": "VII",
+   "region": "Central Visayas",
+   "market": "Carbon Market, Cebu City",
+   "lat": 10.292,
+   "lon": 123.902,
+   "level": 1.02,
+   "aliases": [
+    "cebu",
+    "cebu city"
+   ]
+  },
+  {
+   "id": "bohol",
+   "name": "Bohol",
+   "region_code": "VII",
+   "region": "Central Visayas",
+   "market": "Tagbilaran City Market",
+   "lat": 9.648,
+   "lon": 123.855,
+   "level": 1.05,
+   "aliases": [
+    "bohol",
+    "tagbilaran"
+   ]
+  },
+  {
+   "id": "leyte",
+   "name": "Leyte",
+   "region_code": "VIII",
+   "region": "Eastern Visayas",
+   "market": "Tacloban City Market",
+   "lat": 11.244,
+   "lon": 125.003,
+   "level": 1.04,
+   "aliases": [
+    "leyte",
+    "tacloban"
+   ]
+  },
+  {
+   "id": "zamboanga-sur",
+   "name": "Zamboanga del Sur",
+   "region_code": "IX",
+   "region": "Zamboanga Peninsula",
+   "market": "Pagadian City Market",
+   "lat": 7.826,
+   "lon": 123.437,
+   "level": 1.02,
+   "aliases": [
+    "zamboanga del sur",
+    "zamboanga",
+    "zamboanga city"
+   ]
+  },
+  {
+   "id": "misamis-or",
+   "name": "Misamis Oriental",
+   "region_code": "X",
+   "region": "Northern Mindanao",
+   "market": "Cagayan de Oro Cogon Market",
+   "lat": 8.477,
+   "lon": 124.647,
+   "level": 0.96,
+   "aliases": [
+    "misamis oriental",
+    "cagayan de oro"
+   ]
+  },
+  {
+   "id": "davao-sur",
+   "name": "Davao del Sur",
+   "region_code": "XI",
+   "region": "Davao Region",
+   "market": "Bankerohan Public Market, Davao City",
+   "lat": 7.065,
+   "lon": 125.608,
+   "level": 0.97,
+   "aliases": [
+    "davao del sur",
+    "davao",
+    "davao city"
+   ]
+  },
+  {
+   "id": "south-cotabato",
+   "name": "South Cotabato",
+   "region_code": "XII",
+   "region": "SOCCSKSARGEN",
+   "market": "General Santos City Market",
+   "lat": 6.112,
+   "lon": 125.172,
+   "level": 0.94,
+   "aliases": [
+    "south cotabato",
+    "general santos",
+    "koronadal"
+   ]
+  },
+  {
+   "id": "agusan-norte",
+   "name": "Agusan del Norte",
+   "region_code": "XIII",
+   "region": "Caraga",
+   "market": "Butuan City Public Market",
+   "lat": 8.949,
+   "lon": 125.541,
+   "level": 1.0,
+   "aliases": [
+    "agusan del norte",
+    "butuan"
+   ]
+  },
+  {
+   "id": "lanao-sur",
+   "name": "Lanao del Sur",
+   "region_code": "BARMM",
+   "region": "Bangsamoro (BARMM)",
+   "market": "Marawi City Market",
+   "lat": 7.998,
+   "lon": 124.294,
+   "level": 1.06,
+   "aliases": [
+    "lanao del sur",
+    "marawi"
+   ]
+  },
+  {
+   "id": "maguindanao",
+   "name": "Maguindanao",
+   "region_code": "BARMM",
+   "region": "Bangsamoro (BARMM)",
+   "market": "Cotabato City Market",
+   "lat": 7.223,
+   "lon": 124.246,
+   "level": 1.04,
+   "aliases": [
+    "maguindanao",
+    "cotabato",
+    "cotabato city"
+   ]
+  }
+ ],
+ "wfp_retail_labels": [
+  "Rice (regular, milled)",
+  "Eggplants",
+  "Rice (well milled)",
+  "Rice (special)",
+  "Meat (pork)",
+  "Bitter melon",
+  "Carrots",
+  "Fish (milkfish)",
+  "Tomatoes",
+  "Cabbage",
+  "Meat (beef, chops with bones)",
+  "Potatoes (Irish)",
+  "Meat (pork, with bones)",
+  "Coconut",
+  "Fish (roundscad)",
+  "Eggs",
+  "Fish (tilapia)",
+  "Bananas (lakatan)",
+  "Squashes",
+  "Anchovies",
+  "Meat (chicken, whole)",
+  "Onions (red)",
+  "Meat (beef)",
+  "Shrimp (tiger)",
+  "Beans (mung)",
+  "Choko",
+  "Ginger",
+  "Bananas (latundan)",
+  "Crab",
+  "Calamansi",
+  "Mangoes (carabao)",
+  "Groundnuts (shelled)",
+  "Beans (string)",
+  "Garlic",
+  "Beans (green, fresh)",
+  "Cabbage (chinese)",
+  "Bottle gourd",
+  "Bananas (saba)",
+  "Fish (redbelly yellowtail fusilier)",
+  "Fish (slipmouth)",
+  "Fish (threadfin bream)",
+  "Shrimp (endeavor)",
+  "Groundnuts (unshelled)",
+  "Eggs (duck)",
+  "Maize (yellow)",
+  "Pineapples",
+  "Mandarins",
+  "Sweet potatoes",
+  "Fish (mackerel, fresh)",
+  "Semolina (white)",
+  "Semolina (yellow)",
+  "Sweet Potato leaves",
+  "Water spinach",
+  "Fish (frigate tuna)",
+  "Taro",
+  "Onions (white)",
+  "Mangoes (piko)",
+  "Meat (pork, hock)",
+  "Papaya",
+  "Chicken",
+  "Fish (fresh)",
+  "Garlic (large)",
+  "Garlic (small)",
+  "Maize (white)",
+  "Meat (pork, with fat)",
+  "Oil (cooking)",
+  "Rice (milled, superior)",
+  "Rice (premium)",
+  "Sugar (brown)",
+  "Sugar (white)"
+ ]
+}
