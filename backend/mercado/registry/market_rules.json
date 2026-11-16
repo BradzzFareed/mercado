@@ -1,0 +1,125 @@
+{
+  "_meta": {
+    "generated_from": "hand-entered from REPORT_MARKETS.md and REPORT_UNIVERSE.md",
+    "source_csv": "wfp_http.csv (HDX resource 9a842d72-0d7d-4922-ad0e-eb8106c1ab0e)",
+    "source_csv_md5": "2440ab74363fb321d317430b09b72453",
+    "audit_date": "2026-11-16",
+    "sources": [
+      "~/mercado_audit/dl/wfp_http.csv (MD5 2440ab74363fb321d317430b09b72453)",
+      "~/mercado_audit/universe/ (commodity_universe.csv, admin2.csv, admin2_to_official.csv, market_checks.csv, REPORT_UNIVERSE.md)",
+      "~/mercado_audit/markets/REPORT_MARKETS.md"
+    ],
+    "rule": "assign: market goes to target. alias: same as assign, for a label that names an existing province. quarantine: market is dropped (target null). as-filed: keep the admin2 filing (target null). Rules are matched on the exact market name and applied before the admin2 lookup.",
+    "status": "verified (PSA comparison, REPORT_MARKETS.md); unresolved (no PSA comparisons, quarantined); rule (audit judgement, REPORT_UNIVERSE.md)"
+  },
+  "items": [
+    {
+      "market": "Pampanga",
+      "admin2_filed": "Bulacan",
+      "rule": "assign",
+      "target": "pampanga",
+      "status": "verified",
+      "evidence": "REPORT_MARKETS.md §0, §7: 288/288 PSA matches; controls pass (§3)",
+      "note": "normalize_wfp checks admin2 first and maps this market to bulacan today (REPORT_MARKETS.md §6)."
+    },
+    {
+      "market": "Camarines Sur",
+      "admin2_filed": "Masbate",
+      "rule": "assign",
+      "target": "camarines-sur",
+      "status": "verified",
+      "evidence": "REPORT_MARKETS.md §0, §7: 224/224 PSA matches; controls pass (§3)",
+      "note": "Live mapping is right today only through the market name (§6). Naga City is a separate market."
+    },
+    {
+      "market": "Davao Occidental",
+      "admin2_filed": "Davao del Sur",
+      "rule": "assign",
+      "target": "davao-occidental",
+      "status": "verified",
+      "evidence": "REPORT_MARKETS.md §0, §7: 174/175 PSA matches (99.4%); §4 lists the one miss",
+      "note": "Live mapping sends it to davao-sur today (REPORT_MARKETS.md §6)."
+    },
+    {
+      "market": "Catarman",
+      "admin2_filed": "Southern Leyte",
+      "rule": "quarantine",
+      "target": null,
+      "status": "unresolved",
+      "evidence": "REPORT_MARKETS.md §2.1, §7: 0 PSA comparisons; WFP rows end 2019-06-15",
+      "note": "Live mapping sends it to leyte by substring match (REPORT_MARKETS.md §6). Block until resolved."
+    },
+    {
+      "market": "Santa Cruz",
+      "admin2_filed": "Rizal",
+      "rule": "quarantine",
+      "target": null,
+      "status": "unresolved",
+      "evidence": "REPORT_MARKETS.md §2.1, §7: 0 PSA comparisons; WFP rows end 2019-06-15",
+      "note": "Live mapping already drops it (REPORT_MARKETS.md §6)."
+    },
+    {
+      "market": "Davao City",
+      "admin2_filed": "Davao del Sur",
+      "rule": "as-filed",
+      "target": null,
+      "status": "rule",
+      "evidence": "REPORT_UNIVERSE.md §3 #7: highly urbanized city filed under its parent province",
+      "note": "Not covered by REPORT_MARKETS.md. Keep the admin2 filing."
+    },
+    {
+      "market": "Zamboanga City",
+      "admin2_filed": "Zamboanga del Sur",
+      "rule": "as-filed",
+      "target": null,
+      "status": "rule",
+      "evidence": "REPORT_UNIVERSE.md §3 #6: highly urbanized city filed under its parent province",
+      "note": "Not covered by REPORT_MARKETS.md. Keep the admin2 filing."
+    },
+    {
+      "market": "Cotabato City",
+      "admin2_filed": "Maguindanao",
+      "rule": "as-filed",
+      "target": null,
+      "status": "rule",
+      "evidence": "REPORT_UNIVERSE.md §3 #8: highly urbanized city filed under Maguindanao",
+      "note": "Not covered by REPORT_MARKETS.md. Keep the admin2 filing."
+    },
+    {
+      "market": "Metro Manila",
+      "admin2_filed": "Metropolitan Manila",
+      "rule": "alias",
+      "target": "ncr",
+      "status": "rule",
+      "evidence": "REPORT_UNIVERSE.md §3 #12: identical point, trivial name alias",
+      "note": "Not covered by REPORT_MARKETS.md."
+    },
+    {
+      "market": "Naga City",
+      "admin2_filed": "Camarines Sur",
+      "rule": "as-filed",
+      "target": null,
+      "status": "rule",
+      "evidence": "REPORT_UNIVERSE.md §2: admin2 Camarines Sur has 197 rows ending 2020-10-15; REPORT_MARKETS.md §7 asks for a duplicate check",
+      "note": "Data ends 2020-10, so it does not affect 2024-26 series."
+    },
+    {
+      "market": "La Union (Ilocos Region)",
+      "admin2_filed": "La Union",
+      "rule": "as-filed",
+      "target": null,
+      "status": "rule",
+      "evidence": "REPORT_UNIVERSE.md §3 #11: identical coordinates with San Fernando City",
+      "note": "duplicate point, decide at ingest with data"
+    },
+    {
+      "market": "San Fernando City",
+      "admin2_filed": "La Union",
+      "rule": "as-filed",
+      "target": null,
+      "status": "rule",
+      "evidence": "REPORT_UNIVERSE.md §3 #11: identical coordinates with La Union (Ilocos Region)",
+      "note": "duplicate point, decide at ingest with data"
+    }
+  ]
+}
