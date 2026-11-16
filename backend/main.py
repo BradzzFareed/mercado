@@ -23,7 +23,7 @@ from mercado import forecast, geo, pipeline, sample_data, scheduler, store
 def seed_if_empty():
     store.init_db()
     if store.count_rows() == 0:
-        n = store.upsert_prices(sample_data.generate())
+        n = store.upsert_prices(sample_data.generate(provinces=geo.SYNTHETIC_PROVINCES, comms=cm.SYNTHETIC))
         now = datetime.now().isoformat(timespec="seconds")
         with store._lock, store.connect() as con:
             con.execute(
@@ -68,6 +68,10 @@ def _check_prov(pid):
         raise HTTPException(status_code=404, detail="Unknown province")
 
 
+def _has_commodity(cid):
+    return cid in cm.BY_ID and cid in set(store.available()["commodities"])
+
+
 @API.get("/health")
 def health():
     a = store.available()
@@ -80,13 +84,16 @@ def meta():
     avail = set(a["provinces"])
     provs = [
         dict(id=p["id"], name=p["name"], region_code=p["region_code"], region=p["region"],
-             market=p["market"], lat=p["lat"], lon=p["lon"])
+             market=p["market"], lat=p["lat"], lon=p["lon"], confidence=p["confidence"])
         for p in geo.PROVINCES if p["id"] in avail
     ]
     regions = [dict(r, provinces=[x for x in r["provinces"] if x in avail]) for r in geo.regions()]
     regions = [r for r in regions if r["provinces"]]
-    return dict(provinces=provs, regions=regions, commodities=cm.public(), dishes=cm.dishes(),
-                horizons=list(forecast.HORIZONS), data=a, **pipeline.version_info())
+    have = set(a["commodities"])
+    comms = [c for c in cm.public() if c["id"] in have]
+    without = [dict(id=p["id"], name=p["name"], region=p["region"]) for p in geo.PROVINCES if p["id"] not in avail]
+    return dict(provinces=provs, regions=regions, commodities=comms, provinces_without_data=without,
+                dishes=cm.dishes(), horizons=list(forecast.HORIZONS), data=a, **pipeline.version_info())
 
 
 @API.get("/overview")
@@ -101,7 +108,7 @@ def overview(province: str = "ncr"):
 @API.get("/forecast")
 def fc(province: str = "ncr", commodity: str = "rice"):
     _check_prov(province)
-    if commodity not in cm.BY_ID:
+    if not _has_commodity(commodity):
         return _err("Unknown province or commodity", 404)
     try:
         return forecast.detail(province, commodity)
@@ -111,7 +118,7 @@ def fc(province: str = "ncr", commodity: str = "rice"):
 
 @API.get("/map")
 def pmap(commodity: str = "rice"):
-    if commodity not in cm.BY_ID:
+    if not _has_commodity(commodity):
         return _err("Unknown commodity", 404)
     return dict(rows=forecast.price_map(commodity))
 
@@ -119,7 +126,7 @@ def pmap(commodity: str = "rice"):
 @API.get("/compare")
 def compare(province: str = "ncr", commodity: str = "rice"):
     _check_prov(province)
-    if commodity not in cm.BY_ID:
+    if not _has_commodity(commodity):
         return _err("Unknown province or commodity", 404)
     try:
         return forecast.compare(province, commodity)

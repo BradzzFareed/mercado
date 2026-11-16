@@ -112,8 +112,11 @@ def summary(province, commodity, allow_quick=False):
 
 def overview(province):
     from concurrent.futures import ThreadPoolExecutor
+    df = store.load()
+    have = set(df.loc[df["province"] == province, "commodity"])
+    comms = [c for c in cm.COMMODITIES if c["id"] in have]
     with ThreadPoolExecutor(max_workers=2) as ex:
-        items = list(ex.map(lambda c: summary(province, c["id"]), cm.COMMODITIES))
+        items = list(ex.map(lambda c: summary(province, c["id"]), comms))
     # Palengke basket: weighted sum of unit prices (weights ~ a small carinderia's weekly kg)
     w = {c["id"]: c["basket"] for c in cm.COMMODITIES}
     cur = sum(w[i["commodity"]] * i["price"] for i in items)

@@ -61,9 +61,9 @@ def test_wfp_normalizer_handles_hxl_row_and_units():
 
 def test_api_endpoints(client):
     meta = client.get("/api/v1/meta").json()
-    assert len(meta["provinces"]) >= 20 and len(meta["commodities"]) == 10
+    assert len(meta["provinces"]) >= 20 and len(meta["commodities"]) == len(cm.SYNTHETIC)
     ov = client.get("/api/v1/overview?province=ncr").json()
-    assert len(ov["items"]) == 10
+    assert len(ov["items"]) == len(cm.SYNTHETIC)
     assert all(i["horizons"]["14"]["signal"] in ("dip", "surge", "stable") for i in ov["items"])
     d = client.get("/api/v1/forecast?province=ncr&commodity=tomato").json()
     assert len(d["forecast"]) == 5 and d["forecast"][0]["lo"] < d["forecast"][0]["price"] < d["forecast"][0]["hi"]
@@ -74,7 +74,7 @@ def test_api_endpoints(client):
 def test_pipeline_simulate_adds_a_week_and_changes_data(client):
     before = store.last_date()
     rep = client.post("/api/v1/pipeline/run", json={"mode": "simulate"}).json()
-    assert rep["status"] == "ok" and rep["rows_added"] == len(geo.PROVINCES) * len(cm.COMMODITIES)
+    assert rep["status"] == "ok" and rep["rows_added"] == len(geo.SYNTHETIC_PROVINCES) * len(cm.SYNTHETIC)
     assert (store.last_date() - before).days == 7
 
 

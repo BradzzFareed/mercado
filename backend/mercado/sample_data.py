@@ -99,8 +99,8 @@ def generate(end=DEFAULT_END, provinces=None, comms=None):
     """Return a long DataFrame: date, province, region, market, commodity, price, source."""
     n = n_weeks(end)
     dates = week_dates(n)
-    provinces = provinces or geo.PROVINCES
-    comms = comms or cm.COMMODITIES
+    provinces = provinces or geo.SYNTHETIC_PROVINCES
+    comms = comms or cm.SYNTHETIC
     nat = {c["id"]: _national(c, MAX_WEEKS)[:n] for c in comms}
     storm_idx = [((d - START).days // 7, sev, la, lo, rad) for d, sev, la, lo, rad in STORMS]
     rows = []
