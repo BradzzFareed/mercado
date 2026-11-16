@@ -138,12 +138,6 @@ def delete_source(con, source):
     con.execute("DELETE FROM prices WHERE source = ?", (source,))
 
 
-def reset_prices():
-    with _lock, connect() as con:
-        con.execute("DELETE FROM prices")
-    _cache["df"] = None
-
-
 def series_keys_with(con, *sources):
     """(province, commodity) pairs that hold at least one row from any of the given sources."""
     marks = ",".join("?" * len(sources))
