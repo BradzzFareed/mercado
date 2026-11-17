@@ -88,6 +88,11 @@ def test_live_mode_degrades_gracefully_offline(client):
     assert rep["status"] in ("ok", "no_update")
 
 
+def test_meta_eggs_unit_is_piece(client):
+    eggs = next(c for c in client.get("/api/v1/meta").json()["commodities"] if c["id"] == "eggs")
+    assert eggs["unit"] == eggs["unit_label"] == "piece"
+
+
 def test_meta_data_version_changes_after_pipeline_run(client):
     first = client.get("/api/v1/meta").json()
     assert isinstance(first["data_version"], str) and first["data_version"]
