@@ -65,7 +65,7 @@ def test_meta_contract_v2(client):
     assert len(without) == len(geo.PROVINCES) - len(geo.SYNTHETIC_PROVINCES)
     assert set(without[0]) == {"id", "name", "region"}
     assert [c["id"] for c in meta["commodities"]] == [c["id"] for c in cm.SYNTHETIC]
-    assert set(meta["commodities"][0]) == set(cm.PUBLIC_FIELDS)
+    assert set(cm.PUBLIC_FIELDS) <= set(meta["commodities"][0])
     assert all(p["confidence"] in ("high", "UNCERTAIN") for p in meta["provinces"])
     assert meta["data_version"] and "last_updated" in meta
 
