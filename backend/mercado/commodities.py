@@ -40,7 +40,7 @@ def match_commodity(text):
     return None
 
 
-# Carinderia menu costing: amounts are in the commodity's price unit (kg or dozen).
+# Carinderia menu costing: amounts are in the commodity's price unit (kg or piece).
 # Other ingredients (oil, spices, gas) are folded into `other` pesos per serving.
 DISHES = [
     dict(id="adobo", name="Pork adobo", price=75, other=9,
@@ -50,7 +50,7 @@ DISHES = [
     dict(id="bangus", name="Daing na bangus", price=70, other=8,
          items=[("bangus", 0.20, "200 g bangus"), ("calamansi", 0.01, "10 g calamansi")]),
     dict(id="torta", name="Tortang talong", price=40, other=5,
-         items=[("eggplant", 0.12, "120 g eggplant"), ("eggs", 0.1667, "2 eggs"), ("tomato", 0.03, "30 g tomato")]),
+         items=[("eggplant", 0.12, "120 g eggplant"), ("eggs", 2.0, "2 eggs"), ("tomato", 0.03, "30 g tomato")]),
     dict(id="rice", name="Plain rice (1 cup)", price=15, other=1.5,
          items=[("rice", 0.09, "90 g raw rice")]),
     dict(id="ginisang", name="Ginisang repolyo", price=35, other=5,

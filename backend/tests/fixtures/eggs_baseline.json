@@ -1,0 +1,15 @@
+{
+  "_source": "sample_data.generate() at 3559432 (pre A2c eggs change); sha256 of rows date|province|commodity|price sorted",
+  "torta_baseline": 36.5336,
+  "non_eggs_hashes": {
+    "bangus": "2c275f306c800f01ba78178b2492f9dde7f2d34b5b6a9efebc55474d4c8a79f2",
+    "cabbage": "42c8cb1f6f83f21a6699b316b84bb79a984a4da543afa4e6396877156a22028c",
+    "calamansi": "ed8de8da0546c4ae99b14348b7915cd13e33e162a76b08bbb059e58fcd6160e4",
+    "chicken": "f2093472615e33326d8a7fd9a3bdfe975053bc6d8e30eb75875e5053c89e77a5",
+    "eggplant": "8d18e37ebfb1d7d890bf27e023370f9001c677b05a5e72c799ee5df48248f22c",
+    "onion": "3ae40b880853a91b4da95b9c853762af021aeacf2fca0acdd3c00485695f3ace",
+    "pork": "a49f44c61bce91ab8ffde808e234c49234411bb145b52313083bfbd10d265655",
+    "rice": "629fd96baea3c9c9710b9aa2a83a140fff936e63d1e0ad5c748b931dbd3e0dfb",
+    "tomato": "0acb5dbe4988c41add333c31ef61c91b8999c9fbb89033d20d6b8ca2a34f37b2"
+  }
+}

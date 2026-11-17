@@ -25,7 +25,8 @@
     },
     "chicken_generic": "WFP label 'Chicken' (discontinued 2020) slugs to the legacy id 'chicken', so it is 'chicken-generic'",
     "new_entries": "id = slug of label; fil null; icon null; typhoon/fuel/shelf/basket 0; keywords []; scenario false; no generator parameters",
-    "unit": "kg | piece (Eggs (duck), WFP unit 'Unit') | 750 ml (Oil (cooking)); legacy eggs stay dozen",
+    "unit": "kg | piece (Eggs and Eggs (duck); WFP Eggs unit 'Unit') | 750 ml (Oil (cooking))",
+    "eggs_per_piece": "A2c 2026-11-18: legacy eggs unit changed dozen -> piece (WFP 'Eggs' is per Unit). Synthetic generator base 85 -> 85/12 so the series scale matches real per-piece data; no conversion of real rows. DISHES egg quantities are pieces.",
     "group": "legacy group strings reused; new groups: Roots & Tubers, Seafood, Pulses & Nuts, Oils & Fats, Sugar & Sweeteners",
     "scenario": "true only where explicit sensitivities exist (legacy 10); What-If and basket use those values"
   },
@@ -116,9 +117,9 @@
       "short": "Eggs",
       "fil": "Itlog",
       "group": "Meat & Poultry",
-      "unit": "dozen",
+      "unit": "piece",
       "icon": "🥚",
-      "base": 85,
+      "base": 7.083333333333333,
       "drift": 0.04,
       "amp": 0.03,
       "peak": 49,
@@ -133,7 +134,7 @@
       ],
       "label_wfp": "Eggs",
       "category": "meat, fish and eggs",
-      "unit_label": "dozen",
+      "unit_label": "piece",
       "scenario": true
     },
     {

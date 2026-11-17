@@ -10,7 +10,17 @@ import pandas as pd
 DATA_DIR = os.environ.get("MERCADO_DATA_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data"))
 DB_PATH = os.path.join(DATA_DIR, "mercado.db")
 _lock = threading.RLock()
-_cache = {"df": None}
+_cache = {"df": None, "index": None}
+_gen = {"n": 0}
+
+
+def generation():
+    """Bumped whenever the price data may have changed (any transaction or cache drop).
+
+    Forecast-side caches listen to this so a store change never leaves stale series behind.
+    """
+    with _lock:
+        return _gen["n"]
 
 # prices.source: real (WFP, written by the loader) | synthetic (sample generator) | inbox (CSV inbox).
 # Older databases may still hold 'sample' or 'wfp' labels; migrate() relabels them to 'synthetic'.
@@ -85,6 +95,8 @@ def transaction():
             raise
         finally:
             _cache["df"] = None
+            _cache["index"] = None
+            _gen["n"] += 1
             con.close()
 
 
@@ -135,20 +147,22 @@ def insert_observations(con, df):
 
 
 def delete_source(con, source):
-    con.execute("DELETE FROM prices WHERE source = ?", (source,))
+    """Delete every row of `source`; NULL-source rows belong to 'synthetic'."""
+    con.execute("DELETE FROM prices WHERE COALESCE(source, 'synthetic') = ?", (source,))
 
 
 def series_keys_with(con, *sources):
-    """(province, commodity) pairs that hold at least one row from any of the given sources."""
+    """(province, commodity) pairs that hold at least one row from any of the given sources (NULL reads as synthetic)."""
     marks = ",".join("?" * len(sources))
-    rows = con.execute(f"SELECT DISTINCT province, commodity FROM prices WHERE source IN ({marks})", sources)
+    rows = con.execute(f"SELECT DISTINCT province, commodity FROM prices "
+                       f"WHERE COALESCE(source, 'synthetic') IN ({marks})", sources)
     return {(r[0], r[1]) for r in rows}
 
 
 def synthetic_only_keys(con):
-    """(province, commodity) pairs whose every row is synthetic."""
+    """(province, commodity) pairs whose every row is synthetic (NULL counts as synthetic)."""
     rows = con.execute("SELECT province, commodity FROM prices GROUP BY province, commodity "
-                       "HAVING SUM(source != 'synthetic') = 0")
+                       "HAVING SUM(COALESCE(source, 'synthetic') != 'synthetic') = 0")
     return {(r[0], r[1]) for r in rows}
 
 
@@ -156,27 +170,39 @@ def max_date(con, source=None):
     if source is None:
         row = con.execute("SELECT MAX(date) FROM prices").fetchone()
     else:
-        row = con.execute("SELECT MAX(date) FROM prices WHERE source = ?", (source,)).fetchone()
+        # Reads treat a NULL source as 'synthetic' (databases migrated from the old schema).
+        row = con.execute("SELECT MAX(date) FROM prices WHERE COALESCE(source, 'synthetic') = ?", (source,)).fetchone()
     return date.fromisoformat(row[0]) if row[0] else None
 
 
 def load():
-    """All prices as a DataFrame (cached)."""
-    if _cache["df"] is None:
-        with _lock, connect() as con:
-            df = pd.read_sql_query("SELECT * FROM prices", con)
-        df["date"] = pd.to_datetime(df["date"])
-        _cache["df"] = df
-    return _cache["df"]
+    """Price rows as a DataFrame (cached). NULL sources are normalised to 'synthetic'.
+
+    Reads only what the series/tier code needs (region/market live in the geo registry) through a
+    plain connection (the Row factory slows bulk fetches), and keeps `date` as ISO strings until a
+    series needs a DatetimeIndex - converting 800k dates up front costs a third of the first load.
+    """
+    with _lock:
+        if _cache["df"] is None:
+            con = sqlite3.connect(DB_PATH, timeout=30)
+            try:
+                df = pd.read_sql_query(
+                    "SELECT date, province, commodity, price, COALESCE(source, 'synthetic') AS source FROM prices", con)
+            finally:
+                con.close()
+            _cache["df"] = df
+        return _cache["df"]
 
 
 def invalidate():
     _cache["df"] = None
+    _cache["index"] = None
+    _gen["n"] += 1
 
 
 def last_date():
     df = load()
-    return None if df.empty else df["date"].max().date()
+    return None if df.empty else date.fromisoformat(df["date"].max())
 
 
 def interpolate_weekly(s):
@@ -185,13 +211,25 @@ def interpolate_weekly(s):
     return s.resample("W-MON").mean().interpolate(limit=8, limit_area="inside").dropna()
 
 
+def series_view():
+    """(province, commodity)-keyed view of the price frame, cached alongside load().
+
+    One sort at first use instead of a full-frame scan per series lookup; read-only after build.
+    """
+    with _lock:
+        df = load()
+        if _cache["index"] is None:
+            _cache["index"] = df.set_index(["province", "commodity"]).sort_index()
+        return _cache["index"]
+
+
 def series(province, commodity):
     """Weekly (Monday) price series, gaps interpolated. Raises ValueError if too short."""
-    df = load()
-    s = df[(df["province"] == province) & (df["commodity"] == commodity)]
-    if s.empty:
+    view = series_view()
+    if (province, commodity) not in view.index:
         raise ValueError(f"no data for {province}/{commodity}")
-    s = interpolate_weekly(s.set_index("date")["price"])
+    s = view.loc[(province, commodity)]
+    s = interpolate_weekly(s.set_index(pd.to_datetime(s["date"]))["price"])
     if len(s) < 110:
         raise ValueError(f"need at least 110 weeks of history for {province}/{commodity}, have {len(s)}")
     return s
@@ -204,8 +242,50 @@ def available():
     return {
         "provinces": sorted(df["province"].unique().tolist()),
         "commodities": sorted(df["commodity"].unique().tolist()),
-        "start": df["date"].min().date().isoformat(),
-        "end": df["date"].max().date().isoformat(),
+        "start": df["date"].min(),
+        "end": df["date"].max(),
         "rows": int(len(df)),
         "sources": df.groupby("source")["price"].count().to_dict(),
     }
+
+
+# ---------------------------------------------------------------- tier reads
+def price_series_index(con):
+    """Per (province, commodity): the set of sources, weekly point count and last price date.
+
+    One grouped query over prices; NULL sources read as 'synthetic'. Returns
+    {(province, commodity): {"sources": set, "n_weeks": int, "last_price": str}}.
+    """
+    rows = con.execute("SELECT province, commodity, COALESCE(source, 'synthetic') AS src, "
+                       "COUNT(*) AS n, MAX(date) AS last_price FROM prices "
+                       "GROUP BY province, commodity, src")
+    out = {}
+    for r in rows:
+        e = out.setdefault((r["province"], r["commodity"]), {"sources": set(), "n_weeks": 0, "last_price": r["last_price"]})
+        e["sources"].add(r["src"])
+        e["n_weeks"] += r["n"]
+        e["last_price"] = max(e["last_price"], r["last_price"])
+    return out
+
+
+def observation_stats(con):
+    """Per (province, commodity): distinct observation months and first/last observation date."""
+    rows = con.execute("SELECT province, commodity, COUNT(DISTINCT substr(obs_date, 1, 7)) AS n_months, "
+                       "MIN(obs_date) AS first_obs, MAX(obs_date) AS last_obs FROM observations "
+                       "GROUP BY province, commodity")
+    return {(r["province"], r["commodity"]): dict(n_months=r["n_months"], first_obs=r["first_obs"], last_obs=r["last_obs"])
+            for r in rows}
+
+
+def max_observation_date(con):
+    """Latest observation date in the dataset (any market), or None."""
+    row = con.execute("SELECT MAX(obs_date) FROM observations").fetchone()
+    return date.fromisoformat(row[0]) if row[0] else None
+
+
+def observation_history(con, province, commodity):
+    """Mean observed price per observation date, oldest first: [(date, price)]."""
+    rows = con.execute("SELECT obs_date, AVG(price) AS price FROM observations "
+                       "WHERE province = ? AND commodity = ? GROUP BY obs_date ORDER BY obs_date",
+                       (province, commodity))
+    return [(date.fromisoformat(r["obs_date"]), float(r["price"])) for r in rows]

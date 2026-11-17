@@ -1,4 +1,5 @@
 import json
+import hashlib
 import os
 import re
 
@@ -153,3 +154,55 @@ def test_sample_generator_defaults_to_synthetic_subsets():
     df = sample_data.generate(end=sample_data.date(2019, 1, 14))
     assert set(df["province"]) == {p["id"] for p in geo.SYNTHETIC_PROVINCES}
     assert set(df["commodity"]) == {c["id"] for c in cm.SYNTHETIC}
+
+
+# ---------------------------------------------------------------- eggs per piece
+with open(os.path.join(os.path.dirname(__file__), "fixtures", "eggs_baseline.json"), encoding="utf-8") as fh:
+    EGGS_BASELINE = json.load(fh)
+
+
+def test_eggs_has_exactly_one_unit():
+    entries = [c for c in cm.COMMODITIES if c["id"] == "eggs"]
+    assert len(entries) == 1
+    eggs = entries[0]
+    assert eggs["unit"] == eggs["unit_label"] == "piece"
+    assert "|" not in eggs["unit"]
+    assert all(c["unit"] != "dozen" for c in cm.COMMODITIES)
+
+
+def test_eggs_dish_ingredient_is_pieces():
+    torta = next(d for d in cm.DISHES if d["id"] == "torta")
+    eggs = next(i for i in torta["items"] if i[0] == "eggs")
+    assert eggs[1] == 2.0 and eggs[2] == "2 eggs"
+
+
+def test_synthetic_eggs_are_plausible_per_piece():
+    from mercado import sample_data
+    df = sample_data.generate(provinces=[geo.BY_ID["ncr"]], comms=[cm.BY_ID["eggs"]])
+    assert 5 <= df["price"].min() <= df["price"].max() <= 20
+
+
+def _series_hash(sub):
+    sub = sub.sort_values(["date", "province", "commodity"])
+    h = hashlib.sha256()
+    for d, p, c, v in zip(sub["date"], sub["province"], sub["commodity"], sub["price"]):
+        h.update(f"{d:%Y-%m-%d}|{p}|{c}|{v:.2f}\n".encode())
+    return h.hexdigest()
+
+
+def test_non_eggs_synthetic_series_are_byte_identical():
+    from mercado import sample_data
+    df = sample_data.generate()
+    for cid, want in EGGS_BASELINE["non_eggs_hashes"].items():
+        got = _series_hash(df[df["commodity"] == cid])
+        assert got == want, cid
+
+
+def test_torta_cost_matches_baseline():
+    from mercado import sample_data
+    df = sample_data.generate()
+    last = df["date"].max()
+    ncr = df[(df["province"] == "ncr") & (df["date"] == last)].set_index("commodity")["price"]
+    cost = 5 + 0.12 * ncr["eggplant"] + 0.03 * ncr["tomato"] + 2.0 * ncr["eggs"]
+    baseline = EGGS_BASELINE["torta_baseline"]
+    assert abs(cost - baseline) <= max(1.0, 0.01 * baseline)

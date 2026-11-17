@@ -365,7 +365,7 @@ This contract covers `GET /api/v1/meta`. Changes from v1 are additive: existing 
 | `short` | string | none | Short display name. |
 | `fil` | string or null | `null` | Filipino name. Null for new entries. |
 | `group` | string | none | One of: `Grains`, `Meat & Poultry`, `Fish`, `Vegetables & Fruit`, `Roots & Tubers`, `Seafood`, `Pulses & Nuts`, `Oils & Fats`, `Sugar & Sweeteners`. |
-| `unit` | string | none | `kg`, `dozen` (legacy eggs), `piece` (`Eggs (duck)`), or `750 ml` (`Oil (cooking)`). |
+| `unit` | string | none | `kg`, `piece` (`eggs`, `Eggs (duck)`), or `750 ml` (`Oil (cooking)`). |
 | `icon` | string or null | `null` | Emoji. |
 | `typhoon` | number | `0` | What-If sensitivity. `0` means no scenario effect. |
 | `fuel` | number | `0` | What-If sensitivity. `0` means no scenario effect. |
@@ -373,7 +373,7 @@ This contract covers `GET /api/v1/meta`. Changes from v1 are additive: existing 
 | `basket` | number | `0` | Weight in the palengke basket. `0` excludes the commodity from the basket. |
 | `category` | string | none | WFP category, verbatim (for example `vegetables and fruits`). |
 | `label_wfp` | string | none | Exact WFP retail label. Unique across commodities. |
-| `unit_label` | string | none | Display unit: `kg`, `dozen`, `piece`, or `750 ml`. |
+| `unit_label` | string | none | Display unit: `kg`, `piece`, or `750 ml`. |
 | `scenario` | boolean | `false` | `true` only where explicit sensitivities exist (the legacy 10). |
 
 ### 12.2 `meta.provinces[]`
@@ -396,14 +396,29 @@ This contract covers `GET /api/v1/meta`. Changes from v1 are additive: existing 
 - `data_version` and `last_updated`: unchanged, from `pipeline.version_info()`.
 - `dishes`, `horizons`, `data`: unchanged.
 
-### 12.4 Planned additions (not implemented; do not depend on them yet)
+### 12.4 Series tiers, engines and horizons (implemented)
 
-These are planned for the ingest and tiering steps. They are not in the code today.
+Each (province, commodity) series is tiered from the data (`mercado/tiers.py`), never stored in the registry:
 
-- **Commodity `source`** (planned): where the price series comes from, for example `wfp`.
-- **Commodity `tier`** (planned): `forecast`, `history` or `discontinued`, computed from the data at ingest.
-- **Commodity `native_step`** (planned): cadence of the source observations before weekly resampling (for example `monthly` for WFP).
-- **Commodity `horizons`** (planned): per-commodity horizon list. Today `horizons` is global at the top level.
+| Field | Values | Notes |
+|---|---|---|
+| `source` | `real`, `synthetic`, `inbox`, `mixed` | From `prices.source`; NULL reads as `synthetic`. `mixed` when a series holds more than one source. |
+| `tier` | `forecast`, `history`, `hidden` | `forecast`: >= 36 distinct observation months and fresh. `history`: fresh and 12–35 months. `hidden`: stale (last observation older than 3 months from the dataset's latest real observation, not today) or < 12 months. Synthetic series are always `forecast`. |
+| `engine` | `full`, `quick`, `none` | `full` for the forecast tier with >= 145 weekly price points; `quick` otherwise (forecast tier below 145, or history tier with >= 110); `none` for observations-only or hidden series. |
+| `native_step` | `week`, `month` | `week` for synthetic series, `month` for real ones (monthly data interpolated to a weekly grid). |
+| `horizons` | `[7,14,30]` or `[30]` | Synthetic series keep all three; real series expose 30 days only. History-only series have none. |
+
+Series fields served per row by `/forecast`, `/overview` and `/map`: `source`, `tier`, `engine`, `native_step`, `unit` (from the registry), `confidence` (`normal`, or `low` for the history tier and quick-engine series), `baseline` (the last observed price, i.e. the naive forecast), and `horizons_available`. `/forecast` additionally returns `no_gain_vs_last_price` (`true`/`false`/`null`): computed from the engine's own 10-origin backtest as ensemble MAE >= naive MAE, gated by `NO_GAIN_FLAG_ENABLED` in `mercado/forecast.py`. The A2c agreement check against the A3' accuracy audit failed (the engine's own backtest is in-sample and disagrees with A3'), so the flag ships disabled and the field is always `null`.
+
+**Horizon rule.** Requesting a horizon a series does not offer returns **422** with `available_horizons`; nothing is substituted silently.
+
+**History-only series** (engine `none`, known only from observations): `/forecast` returns 200 with the observed history, `forecast: []`, `horizons: {}` and `horizons_available: []`.
+
+**Bulk endpoints never train the full ensemble on demand.** `/overview`, `/map` and `/compare` use a cached full result when one exists, otherwise the quick engine (quick results are not cached). `warm()` pre-computes the full engine for every stored non-hidden full-tier series — the legacy 10 commodities first, then the rest — in a background thread pool (1 worker; the engine is GIL-bound), keeping `MERCADO_WARM=0` as the off switch. The full-result cache is capped at `CACHE_MAX_ENTRIES` (3000) with oldest-entry eviction.
+
+**`GET /api/v1/coverage`** returns the compact series index as arrays: `{"fields": [...], "rows": [[province, commodity, source, tier, engine, n_months, last_obs], ...], "count": n}`. Hidden-tier series are excluded unless `?include_hidden=1`. `/meta` commodities appear only when they have at least one non-hidden series, and carry additive `source_mix`, `tiers`, `horizons` and `native_step`; `/meta` provinces carry additive `tiers`.
+
+**Eggs unit.** `eggs` is priced per **piece** (WFP "Eggs" is per unit). The registry `unit`/`unit_label` are `piece`; dish quantities are pieces; the synthetic generator's eggs are generated per piece, so a series never changes scale when real data replaces it.
 
 ### 12.5 Errors
 
