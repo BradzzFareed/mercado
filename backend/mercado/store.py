@@ -10,7 +10,7 @@ import pandas as pd
 DATA_DIR = os.environ.get("MERCADO_DATA_DIR", os.path.join(os.path.dirname(os.path.dirname(__file__)), "data"))
 DB_PATH = os.path.join(DATA_DIR, "mercado.db")
 _lock = threading.RLock()
-_cache = {"df": None}
+_cache = {"df": None, "index": None}
 
 # prices.source: real (WFP, written by the loader) | synthetic (sample generator) | inbox (CSV inbox).
 # Older databases may still hold 'sample' or 'wfp' labels; migrate() relabels them to 'synthetic'.
@@ -85,6 +85,7 @@ def transaction():
             raise
         finally:
             _cache["df"] = None
+            _cache["index"] = None
             con.close()
 
 
@@ -164,24 +165,32 @@ def max_date(con, source=None):
 
 
 def load():
-    """All prices as a DataFrame (cached). NULL sources are normalised to 'synthetic'."""
+    """Price rows as a DataFrame (cached). NULL sources are normalised to 'synthetic'.
+
+    Reads only what the series/tier code needs (region/market live in the geo registry) through a
+    plain connection (the Row factory slows bulk fetches), and keeps `date` as ISO strings until a
+    series needs a DatetimeIndex - converting 800k dates up front costs a third of the first load.
+    """
     with _lock:
         if _cache["df"] is None:
-            with connect() as con:
-                df = pd.read_sql_query("SELECT * FROM prices", con)
-            df["date"] = pd.to_datetime(df["date"])
-            df["source"] = df["source"].fillna("synthetic")
+            con = sqlite3.connect(DB_PATH, timeout=30)
+            try:
+                df = pd.read_sql_query(
+                    "SELECT date, province, commodity, price, COALESCE(source, 'synthetic') AS source FROM prices", con)
+            finally:
+                con.close()
             _cache["df"] = df
         return _cache["df"]
 
 
 def invalidate():
     _cache["df"] = None
+    _cache["index"] = None
 
 
 def last_date():
     df = load()
-    return None if df.empty else df["date"].max().date()
+    return None if df.empty else date.fromisoformat(df["date"].max())
 
 
 def interpolate_weekly(s):
@@ -190,13 +199,25 @@ def interpolate_weekly(s):
     return s.resample("W-MON").mean().interpolate(limit=8, limit_area="inside").dropna()
 
 
+def series_view():
+    """(province, commodity)-keyed view of the price frame, cached alongside load().
+
+    One sort at first use instead of a full-frame scan per series lookup; read-only after build.
+    """
+    with _lock:
+        df = load()
+        if _cache["index"] is None:
+            _cache["index"] = df.set_index(["province", "commodity"]).sort_index()
+        return _cache["index"]
+
+
 def series(province, commodity):
     """Weekly (Monday) price series, gaps interpolated. Raises ValueError if too short."""
-    df = load()
-    s = df[(df["province"] == province) & (df["commodity"] == commodity)]
-    if s.empty:
+    view = series_view()
+    if (province, commodity) not in view.index:
         raise ValueError(f"no data for {province}/{commodity}")
-    s = interpolate_weekly(s.set_index("date")["price"])
+    s = view.loc[(province, commodity)]
+    s = interpolate_weekly(s.set_index(pd.to_datetime(s["date"]))["price"])
     if len(s) < 110:
         raise ValueError(f"need at least 110 weeks of history for {province}/{commodity}, have {len(s)}")
     return s
@@ -209,8 +230,8 @@ def available():
     return {
         "provinces": sorted(df["province"].unique().tolist()),
         "commodities": sorted(df["commodity"].unique().tolist()),
-        "start": df["date"].min().date().isoformat(),
-        "end": df["date"].max().date().isoformat(),
+        "start": df["date"].min(),
+        "end": df["date"].max(),
         "rows": int(len(df)),
         "sources": df.groupby("source")["price"].count().to_dict(),
     }
