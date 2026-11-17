@@ -2,7 +2,7 @@
 
 > **How to use this file:** upload it as-is to an LLM to give it working context for this repository. It describes the code as it exists today. If this document and the code disagree, the code wins — fix the document.
 >
-> **Last reviewed:** 2026-11-17 against the code. Backend tests: `44 passed`.
+> **Last reviewed:** 2026-11-17 against the code. Backend tests: `63 passed`.
 
 ---
 
@@ -55,14 +55,17 @@ mercado/
 │   │   ├── sample_data.py         # deterministic synthetic weekly price generator
 │   │   ├── models.py              # naive / Holt-Winters / Ridge / GBM / ensemble, backtests
 │   │   ├── forecast.py            # result cache, signals, horizon blocks, overview/detail/map/compare, warm()
-│   │   ├── pipeline.py            # live / wfp / inbox / da / simulate / seed ingestion and run log
+│   │   ├── pipeline.py            # live / wfp / inbox / da / simulate / seed; WFP via wfp.py, one transaction per run
 │   │   ├── scheduler.py           # background thread that re-runs the pipeline
 │   │   ├── commodities.py         # registry-backed: 70 WFP commodities (10 synthetic), 6 carinderia dishes
 │   │   ├── registry/              # commodities.json, provinces.json, market_rules.json (identity data)
 │   │   └── geo.py                 # registry-backed: 82 provinces (25 synthetic), regions, haversine, name matching
 │   ├── data/                      # GITIGNORED, generated: mercado.db, live/, inbox/
 │   └── tests/
-│       └── test_mercado.py        # 6 pytest tests via fastapi.testclient
+│       ├── test_mercado.py        # API, forecast and pipeline tests via fastapi.testclient
+│       ├── test_registry.py       # registry integrity and legacy snapshot
+│       ├── test_wfp.py            # wfp.py token and MD5 checks, offline
+│       └── test_ingest.py         # WFP mapping, token skipping, transactions, migration, inbox, offline
 │
 └── frontend/
     ├── .env.example               # VITE_API_BASE, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_DEV_BYPASS_AUTH
@@ -111,7 +114,7 @@ mercado/
 
 1. `seed_if_empty()`: calls `store.init_db()`. If `store.count_rows() == 0`, it inserts `sample_data.generate()` and writes a `pipeline_runs` row with `mode="seed"`.
 2. If `MERCADO_WARM != "0"` and rows exist, starts a daemon thread running `forecast.warm()`.
-3. If `MERCADO_SCHEDULER != "0"`, calls `scheduler.start()`.
+3. If `MERCADO_SCHEDULER == "1"`, calls `scheduler.start()`. The scheduler is off by default.
 4. On shutdown, calls `scheduler.stop()`.
 
 CORS allows only `http://localhost:5173` and `http://127.0.0.1:5173`. All feature routes live on `API = APIRouter(prefix="/api/v1")`, which is included into the app. `GET /` is an unversioned welcome route.
@@ -136,12 +139,12 @@ CORS allows only `http://localhost:5173` and `http://127.0.0.1:5173`. All featur
 
 | Module | Role |
 |---|---|
-| `store.py` | SQLite at `MERCADO_DATA_DIR/mercado.db` (default `backend/data`). A module `RLock` guards writes. Functions: `connect`, `init_db`, `count_rows`, `upsert_prices`, `reset_prices`, `load`, `invalidate`, `last_date`, `series`, `available`. `load()` caches the full price table as a DataFrame until `invalidate()`. `series(province, commodity)` returns a weekly Monday series, interpolated, and raises `ValueError` under 110 weeks. |
+| `store.py` | SQLite at `MERCADO_DATA_DIR/mercado.db` (default `backend/data`). A module `RLock` guards writes. `init_db()` creates the tables and runs `migrate()`, which adds `prices.source` and `pipeline_runs.source_token` only when missing and relabels legacy `sample`/`wfp` sources to `synthetic`. `transaction()` is one `BEGIN IMMEDIATE` write that commits or rolls back. Other functions: `connect`, `count_rows`, `upsert_prices(df, con=None)`, `replace_series`, `insert_observations`, `delete_source`, `series_keys_with`, `synthetic_only_keys`, `max_date`, `interpolate_weekly`, `load`, `invalidate`, `last_date`, `series`, `available`. `load()` caches the full price table as a DataFrame until `invalidate()`. `series(province, commodity)` returns a weekly Monday series, interpolated, and raises `ValueError` under 110 weeks. |
 | `sample_data.py` | Deterministic synthetic history. `START = 2019-01-07`, `DEFAULT_END = 2026-10-26`, which is 408 weeks. Functions: `week_dates`, `n_weeks`, `generate`, `next_week_rows`. Same seed and end date produce the same prefix. |
 | `models.py` | All models work on **log** weekly prices. `MODEL_NAMES = ["naive", "holt_winters", "ridge", "gbm"]`. `gbm` is sklearn's `GradientBoostingRegressor`. Helpers include `holt_winters`, `build_matrix`, `feature_forecast`. `quick()` is the cheap fallback. `full()` runs the rolling-origin backtest and builds the **ensemble**, an inverse-squared-error weighted blend of the four models. `HORIZON = 5` weeks. |
 | `forecast.py` | Result cache keyed by `(kind, mode, province, commodity)` with a version counter. `HORIZONS = (7, 14, 30)`. Public functions: `summary`, `overview`, `detail`, `seasonality`, `price_map`, `compare`, `warm`, `clear_cache`. `summary(..., allow_quick=True)` may use the quick model for series without a full ensemble yet. |
-| `pipeline.py` | `MODES = ("live", "wfp", "inbox", "da", "simulate", "seed")`. `run(mode)` never raises; failures come back as `status: "error"`. A non-blocking `_run_lock` prevents concurrent runs. `normalize_wfp` skips the HXL tag row, filters to retail, converts units to kg or dozen, and matches commodities and provinces. `fetch_wfp`, `read_inbox`, `apply_live`, `recent_runs`. |
-| `scheduler.py` | Daemon thread on `MERCADO_REFRESH_HOURS` (default 24). Functions: `start(interval_hours=None)`, `stop()`, `info()`. |
+| `pipeline.py` | `MODES = ("live", "wfp", "inbox", "da", "simulate", "seed")`. `run(mode)` never raises; failures come back as `status: "error"`. A non-blocking `_run_lock` prevents concurrent runs; `/pipeline/run` returns 409 while one is in progress. The WFP path (`wfp` and `live`) calls `wfp.fetch_remote_token()`, compares the token with `source_token` of the last successful run, and skips with a `no_update` run ("Skipped, unchanged") when it matches. Otherwise it calls `wfp.download_verified()` and runs `normalize_wfp()`: retail rows only, exact WFP labels (`commodities.by_wfp_label`), provinces by `geo.by_wfp_market()` (market rule first, then admin2), unmapped and quarantined rows counted, never guessed, native units. `build_wfp_plan()` keeps observations from 2019-01-01, builds weekly series as the mean over markets, and marks as `real` only the series with at least 110 weekly points whose last observation is within 3 months of the dataset's latest observation. Observations are written for every mapped row. `run()` does all network and parsing first, then writes data and the `pipeline_runs` row in one transaction; a failure rolls back and saves no token. `simulate` appends only to series whose rows are all synthetic. `seed` deletes and regenerates only synthetic rows, skipping series that hold real or inbox data. `inbox` accepts registry ids only, stores series of at least 110 weeks as `inbox`, never overwrites `real`, and renames consumed files to `.done` after commit. `DASource`, `recent_runs`, `version_info`, `last_finished`. |
+| `scheduler.py` | Daemon thread on `MERCADO_REFRESH_HOURS` (default 24), started only when `MERCADO_SCHEDULER=1`. Functions: `start(interval_hours=None)`, `stop()`, `info()`. |
 | `commodities.py` | Loads `registry/commodities.json`. `COMMODITIES` (70, every WFP retail label), `SYNTHETIC` (the 10 legacy commodities with generator parameters), `BY_ID`, `BY_WFP_LABEL`, `by_wfp_label()`, `public()`, `match_commodity()` (matches `SYNTHETIC` only), `DISHES` (6) with per-serving ingredient amounts, `dishes()`. |
 | `geo.py` | Loads `registry/provinces.json` and `registry/market_rules.json`. `PROVINCES` (82), `SYNTHETIC_PROVINCES` (the 25 legacy), `BY_ID`, `regions()`, `match_province()` (legacy aliases only; ingest still uses it), `by_wfp_market()` (market rules first, then the WFP admin2 lookup), `haversine_km()`. |
 
@@ -162,7 +165,8 @@ CORS allows only `http://localhost:5173` and `http://127.0.0.1:5173`. All featur
 CREATE TABLE prices(
   date TEXT NOT NULL,                   -- ISO Monday, one row per province and commodity per week
   province TEXT NOT NULL, region TEXT, market TEXT,
-  commodity TEXT NOT NULL, price REAL NOT NULL, source TEXT,
+  commodity TEXT NOT NULL, price REAL NOT NULL,
+  source TEXT NOT NULL DEFAULT 'synthetic',   -- real | synthetic | inbox
   PRIMARY KEY(date, province, commodity)
 );
 
@@ -170,11 +174,20 @@ CREATE TABLE pipeline_runs(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   started TEXT, finished TEXT, mode TEXT, source TEXT,
   status TEXT, rows_added INTEGER, message TEXT,
-  log TEXT                              -- JSON array of log lines
+  log TEXT,                             -- JSON array of log lines
+  source_token TEXT                     -- JSON RemoteToken of the WFP file this run loaded, or NULL
+);
+
+CREATE TABLE observations(              -- raw WFP retail observations after mapping, native units
+  province TEXT NOT NULL, commodity TEXT NOT NULL, market TEXT NOT NULL,
+  obs_date TEXT NOT NULL, price REAL NOT NULL, unit TEXT,
+  PRIMARY KEY(province, commodity, market, obs_date)
 );
 ```
 
-Seeded dataset: 25 provinces × 10 commodities × 408 weeks = 102,000 rows, `as_of` 2026-10-26. The database is generated at runtime and gitignored. Delete `backend/data/mercado.db` to force a reseed.
+`prices.source` values: `real` (written by the WFP loader), `synthetic` (sample generator), `inbox` (CSV inbox). A database created before A2b has its existing rows relabelled `synthetic`. That label is a default; the old rows' origin was not recorded, so it is not proof that they were synthetic. A series written as `real` or `inbox` replaces the whole existing series for its province and commodity, synthetic rows included.
+
+Seeded dataset: 25 provinces × 10 commodities × 408 weeks = 102,000 rows, `as_of` 2026-10-26. The database is generated at runtime and gitignored. Delete `backend/data/mercado.db` to force a full reset. `seed` alone rebuilds only the synthetic rows and keeps real and inbox data.
 
 ---
 
@@ -248,7 +261,7 @@ Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `pr
 # Backend (from backend/)
 uv sync
 uv run uvicorn main:app --reload        # :8000, docs at /docs
-uv run pytest -q                        # 6 tests, roughly 60–100 s (warms forecasts)
+uv run pytest -q                        # 63 tests, about 45 s, offline (no network needed)
 
 # Frontend (from frontend/)
 pnpm install
@@ -264,7 +277,7 @@ Backend environment variables:
 |---|---|---|
 | `MERCADO_DATA_DIR` | `backend/data` | SQLite and pipeline state location |
 | `MERCADO_WARM` | `1` | Set `0` to skip forecast pre-computation at startup |
-| `MERCADO_SCHEDULER` | `1` | Set `0` to disable the recurring pipeline refresh |
+| `MERCADO_SCHEDULER` | `0` | Set `1` to run the recurring pipeline refresh in the background |
 | `MERCADO_REFRESH_HOURS` | `24` | Scheduler interval |
 
 Frontend environment (`frontend/.env`):
@@ -289,6 +302,7 @@ Frontend environment (`frontend/.env`):
 5. **Pytest emits a Starlette deprecation warning** about `httpx` inside `TestClient`. It is not a failure.
 6. **`pnpm build` warns about a chunk over 500 kB.** It is not a failure.
 7. **Board's scoped styles use hardcoded light-on-dark colors.** This is a follow-up, not a bug.
+8. **Sample badge and sample note read the old label.** `SampleBadge` (`components/Common.jsx`) and the Pipeline page's sample note check `meta.data.sources.sample`. After A2b, synthetic rows are labelled `synthetic`, so both are hidden even while the data is synthetic. Switch the frontend to `sources.synthetic`.
 
 ---
 
@@ -312,7 +326,7 @@ These are declared in `pyproject.toml` for planned model work. They are intentio
 6. **Do not reorder the CSS imports** in `main.jsx` without migrating the affected screens.
 7. **Layout owns the shell.** Pages render content only.
 8. **Keep `Sparkline` and `PhilippinesMap` as SVG.** Only the four main charts use Chart.js.
-9. **Reseeding is destructive.** `POST /api/v1/pipeline/run {"mode": "seed"}` rebuilds the price table.
+9. **Seeding replaces only synthetic data.** `POST /api/v1/pipeline/run {"mode": "seed"}` deletes and regenerates `source='synthetic'` rows. Series that hold `real` or `inbox` data and all `observations` are kept. Deleting `backend/data/mercado.db` remains the only full reset.
 10. **Synthetic data is deterministic.** Changing `sample_data.py` changes every forecast and breaks fixture-style expectations.
 11. **Never commit** `.env`, `backend/data/*.db`, `backend/data/live/`, `backend/data/inbox/`, `node_modules/`, or `dist/`.
 12. **Verify with:** `uv run pytest -q`, `pnpm lint`, `pnpm build`, then `curl` `/api/v1/health`, `/api/v1/meta`, `/api/v1/overview?province=ncr`, and `/api/v1/forecast?province=ncr&commodity=tomato`.

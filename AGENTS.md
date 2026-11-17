@@ -9,7 +9,7 @@ Run commands from the relevant app directory, not the repo root.
 Backend (from `backend/`):
 - `uv sync` — install deps into `backend/.venv`
 - `uv run uvicorn main:app --reload` — dev server on http://127.0.0.1:8000 (docs at `/docs`)
-- `uv run pytest -q` — 6 tests in `tests/test_mercado.py`, about 60–100 s (forecast warm-up dominates)
+- `uv run pytest -q` — 63 tests in `tests/` (`test_mercado`, `test_registry`, `test_wfp`, `test_ingest`), about 45 s, offline
 - Always go through `uv run`; do not rely on a globally installed Python env.
 
 Frontend (from `frontend/`):
@@ -31,6 +31,13 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   `pipeline.py` (live/wfp/inbox/da/simulate/seed), `scheduler.py`, and static
   reference data (`geo.py`, `commodities.py`, `sample_data.py`). The `simulate` mode
   appends one week via `sample_data.next_week_rows()`; there is no separate simulator module.
+- WFP ingest goes through `wfp.py` (token check, MD5-verified download) and the registry
+  (`geo.by_wfp_market`, `commodities.by_wfp_label`). Each run writes its data and its
+  `pipeline_runs` row in one transaction. Raw observations live in `observations`.
+- `prices.source` is `real` (WFP), `synthetic` (sample generator) or `inbox`. Simulate and
+  seed touch only synthetic series, and real or inbox series are never overwritten by synthetic
+  loads. Legacy `sample` and `wfp` labels were relabelled `synthetic` by the migration.
+- The background scheduler is opt-in: set `MERCADO_SCHEDULER=1` to enable it.
 - SQLAlchemy, XGBoost, and joblib are declared in `pyproject.toml` but not imported
   anywhere. The store is still stdlib `sqlite3`, and the `gbm` model is scikit-learn's
   `GradientBoostingRegressor`.
