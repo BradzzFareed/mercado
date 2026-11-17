@@ -1,0 +1,21 @@
+province,commodity,kind,month,prev_markets,cur_markets,common_markets,added,dropped,mean_change_pct,common_median_change_pct,effect_pct,size_pct,flagged
+davao-sur,mangoes-carabao,real,2022-01,1,2,1,Davao City,,53.3,-7.29,65.35,65.35,True
+misamis-or,calamansi,obs_only,2021-01,2,1,1,,Misamis Oriental,-60.0,0.0,-60.0,60.0,True
+davao-sur,maize-yellow,real,2022-01,1,2,1,Davao City,,57.61,5.86,48.88,48.88,True
+davao-sur,onion,real,2022-01,1,2,1,Davao City,,47.07,0.4,46.48,46.48,True
+zamboanga-sur,water-spinach,real,2022-01,1,2,1,Zamboanga City,,66.19,14.83,44.73,44.73,True
+cebu,papaya,obs_only,2020-06,2,1,1,,Cebu City,-41.18,0.0,-41.18,41.18,True
+davao-sur,bottle-gourd,real,2020-12,2,1,1,,Davao City,-36.9,-0.37,-36.67,36.67,True
+davao-sur,water-spinach,obs_only,2020-12,2,1,1,,Davao City,-34.35,2.33,-35.85,35.85,True
+davao-sur,tomato,real,2022-01,1,2,1,Davao City,,42.71,6.05,34.58,34.58,True
+maguindanao,bananas-latundan,real,2021-03,2,1,1,,Cotabato City,37.49,2.28,34.43,34.43,True
+davao-sur,sweet-potato-leaves,obs_only,2020-12,2,1,1,,Davao City,-32.57,1.8,-33.76,33.76,True
+camarines-sur,papaya,obs_only,2020-11,2,1,1,,Naga City,31.2,-0.65,32.06,32.06,True
+zamboanga-sur,water-spinach,real,2021-01,2,1,1,,Zamboanga City,-31.88,-0.6,-31.47,31.47,True
+zamboanga-sur,sweet-potato-leaves,real,2021-01,2,1,1,,Zamboanga City,-36.79,-8.81,-30.68,30.68,True
+zamboanga-sur,crab,real,2022-01,1,2,1,Zamboanga City,,44.04,10.45,30.41,30.41,True
+davao-sur,sweet-potatoes,obs_only,2020-12,2,1,1,,Davao City,-32.46,-3.54,-29.99,29.99,True
+zamboanga-sur,sweet-potato-leaves,real,2022-01,1,2,1,Zamboanga City,,42.99,10.16,29.8,29.8,True
+davao-sur,potatoes-irish,real,2021-01,2,1,1,,Davao del Sur,44.69,11.54,29.72,29.72,True
+zamboanga-sur,bottle-gourd,obs_only,2021-01,2,1,1,,Zamboanga City,10.48,-14.71,29.54,29.54,True
+davao-sur,bananas-lakatan,real,2022-01,1,2,1,Davao City,,13.37,-11.56,28.2,28.2,True

@@ -5,9 +5,9 @@
     "source_csv_md5": "2440ab74363fb321d317430b09b72453",
     "audit_date": "2026-11-16",
     "sources": [
-      "~/mercado_audit/dl/wfp_http.csv (MD5 2440ab74363fb321d317430b09b72453)",
-      "~/mercado_audit/universe/ (commodity_universe.csv, admin2.csv, admin2_to_official.csv, market_checks.csv, REPORT_UNIVERSE.md)",
-      "~/mercado_audit/markets/REPORT_MARKETS.md",
+      "WFP HDX dataset ea251823-8694-47b4-82d0-7d27f00e8aba, resource 9a842d72-0d7d-4922-ad0e-eb8106c1ab0e, MD5 2440ab74363fb321d317430b09b72453",
+      "docs/audit/ (commodity_universe.csv, admin2.csv, admin2_to_official.csv, market_checks.csv, REPORT_UNIVERSE.md)",
+      "docs/audit/REPORT_MARKETS.md",
       "BetterGov PSA geography dimension, as recorded in REPORT_UNIVERSE.md §4"
     ],
     "scope": "82 = 78 WFP admin2 provinces incl. Camarines Sur + Metropolitan Manila (ncr) + Pampanga + Batanes + Davao Occidental",
