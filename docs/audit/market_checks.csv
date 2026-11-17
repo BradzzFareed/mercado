@@ -1,0 +1,109 @@
+market,admin2,admin1,lat,lon,a2_markets,own_peer_n,own_peer_dist_km,nearest_admin2,nearest_admin2_km,name_equals_admin2,name_is_other_admin2,flags
+Zamboanga City,Zamboanga del Sur,Region IX,6.91,122.07,2,1,181.83398059861526,Basilan,28.853229678115937,False,False,name!=admin2; far from own peers; closer to other admin2
+Zamboanga del Sur,Zamboanga del Sur,Region IX,7.82,123.44,2,1,181.83398059861526,Lanao del Norte,73.06247649814998,True,False,far from own peers; closer to other admin2
+Davao City,Davao del Sur,Region XI,7.18,125.44,3,2,66.90164742115016,North Cotabato,42.99823860125223,False,False,name!=admin2; closer to other admin2
+Davao Occidental,Davao del Sur,Region XI,6.41,125.61,3,2,65.92711294490334,Sarangani,49.389096696910165,False,False,name!=admin2
+Cotabato City,Maguindanao,Autonomous region in Muslim Mindanao,7.19,124.24,3,2,60.755767910920206,Sultan Kudarat,73.86917870240394,False,False,name!=admin2
+Maguindanao,Maguindanao,Autonomous region in Muslim Mindanao,6.720000000000001,124.79,3,2,60.15069774701051,Sultan Kudarat,23.24804860769476,True,False,closer to other admin2
+Tubod,Lanao del Norte,Region X,8.22,124.25,2,1,53.42565130225619,Lanao del Sur,24.68479466021833,False,False,name!=admin2; closer to other admin2
+Camarines Sur,Masbate,Region V,12.549999999999999,123.27,2,1,44.43229344443284,Albay,83.50738226688942,False,True,name=other admin2; name!=admin2
+Pampanga,Bulacan,Region III,15.02,121.09,2,1,36.1333733143901,Rizal,47.48710791655704,False,False,name!=admin2
+Catarman,Southern Leyte,Region VIII,10.14,125.0,2,1,18.64136349168461,Dinagat Islands,64.05608186808416,False,False,name!=admin2
+Butuan City,Agusan del Norte,Region XIII,8.96,125.53,2,1,17.92623779188372,Agusan del Sur,57.08224948895005,False,False,name!=admin2
+Cabanatuan City,Nueva Ecija,Region III,15.49,120.96000000000001,3,2,14.723005503638118,Tarlac,39.647715925032166,False,False,name!=admin2
+Shariff Aguak,Maguindanao,Autonomous region in Muslim Mindanao,6.86,124.44000000000001,3,2,13.421295862800713,Sultan Kudarat,31.084266939371776,False,False,name!=admin2
+Palayan,Nueva Ecija,Region III,15.54,121.07999999999998,3,2,6.298138970450783,Tarlac,52.79364052948489,False,False,name!=admin2
+Puerto Princesa,Palawan,Region IV-B,9.74,118.74,2,1,4.447797065782249,Antique,368.050040172052,False,False,name!=admin2
+Baguio City,Benguet,Cordillera Administrative region,16.42,120.60000000000001,3,2,3.5021904476861043,La Union,38.08324579389977,False,False,name!=admin2
+Legazpi City,Albay,Region V,13.140000000000002,123.73000000000002,2,1,2.4344141441299776,Sorsogon,35.738333043104944,False,False,name!=admin2
+Santa Cruz,Rizal,Region IV-A,14.61,121.17,2,1,2.22389853289139,Metropolitan Manila,20.474577701546444,False,False,name!=admin2
+Tuguegarao City,Cagayan,Region II,17.61,121.73,2,1,2.22389853289139,Kalinga,31.658387530712417,False,False,name!=admin2
+Tandag,Surigao del Sur,Region XIII,9.08,126.19999999999999,2,1,2.2238985328910363,Agusan del Sur,61.20885790140198,False,False,name!=admin2
+La Trinidad,Benguet,Cordillera Administrative region,16.45,120.58999999999999,3,2,1.7510889539111911,La Union,35.32949974308594,False,False,name!=admin2
+Koronadal,South Cotabato,Region XII,6.5,124.85,2,1,1.1048014960615875,Sultan Kudarat,31.17089666988811,False,False,name!=admin2
+Kidapawan City,North Cotabato,Region XII,7.010000000000001,125.08999999999999,2,1,1.5708531301169674e-12,Davao del Sur,49.12987654258037,False,False,name!=admin2
+Calapan City,Oriental Mindoro,Region IV-B,13.41,121.17999999999999,2,1,1.5370921346305433e-12,Batangas,41.022560373690354,False,False,name!=admin2
+Lingayen,Pangasinan,Region I,16.02,120.22999999999999,2,1,1.51880952002298e-12,Benguet,60.71060789686547,False,False,name!=admin2
+Cagayan de Oro City,Misamis Oriental,Region X,8.48,124.65,2,1,0.0,Bukidnon,64.30882633384626,False,False,name!=admin2
+Cotabato,North Cotabato,Region XII,7.01,125.09,2,1,0.0,Davao del Sur,49.129876542578984,False,False,name!=admin2
+San Fernando City,La Union,Region I,16.62,120.31,2,1,0.0,Benguet,36.23303248552403,False,False,name!=admin2
+Tacloban City,Leyte,Region VIII,11.25,125.0,2,1,0.0,Samar,59.28124160833857,False,False,name!=admin2
+Abra,Abra,Cordillera Administrative region,17.6,120.62,1,0,,Ilocos Sur,25.65748027010702,True,False,only market in admin2
+Agusan del Sur,Agusan del Sur,Region XIII,8.61,125.90999999999998,1,0,,Surigao del Sur,60.26245937872432,True,False,only market in admin2
+Aklan,Aklan,Region VI,11.71,122.37,1,0,,Capiz,44.865878741137884,True,False,only market in admin2
+Antique,Antique,Region VI,10.76,121.93999999999998,1,0,,Iloilo,68.6637154686375,True,False,only market in admin2
+Apayao,Apayao,Cordillera Administrative region,18.01,121.19,1,0,,Ilocos Norte,65.4919080976253,True,False,only market in admin2
+Aurora,Aurora,Region III,15.75,121.55999999999999,1,0,,Nueva Ecija,60.641949212025246,True,False,only market in admin2
+Basilan,Basilan,Autonomous region in Muslim Mindanao,6.66,122.14000000000001,1,0,,Zamboanga del Sur,103.69233081968525,True,False,only market in admin2
+Bataan,Bataan,Region III,14.67,120.52999999999999,1,0,,Metropolitan Manila,49.035935841539036,True,False,only market in admin2
+Biliran,Biliran,Region VIII,11.56,124.39,1,0,,Samar,58.245794177261004,True,False,only market in admin2
+Bohol,Bohol,Region VII,9.66,123.86999999999999,1,0,,Siquijor,63.742592317706396,True,False,only market in admin2
+Bukidnon,Bukidnon,Region X,8.15,125.13000000000001,1,0,,Misamis Oriental,64.30882633384755,True,False,only market in admin2
+Camarines Norte,Camarines Norte,Region V,14.12,122.96,1,0,,Camarines Sur,60.45756424019566,True,False,only market in admin2
+Camiguin,Camiguin,Region X,9.25,124.72000000000001,1,0,,Misamis Oriental,85.96479369154788,True,False,only market in admin2
+Capiz,Capiz,Region VI,11.58,122.76,1,0,,Aklan,44.865878741137884,True,False,only market in admin2
+Catanduanes,Catanduanes,Region V,13.58,124.23,1,0,,Albay,71.76160287541362,True,False,only market in admin2
+Cavite,Cavite,Region IV-A,14.42,120.94,1,0,,Metropolitan Manila,20.473024020629634,True,False,only market in admin2
+Davao Oriental,Davao Oriental,Region XI,6.96,126.20999999999998,1,0,,Davao del Norte,70.81246143721957,True,False,only market in admin2
+Davao de Oro,Compostela Valley,Region XI,7.6,125.97,1,0,,Davao del Norte,25.08778883635674,False,False,name!=admin2; only market in admin2
+Davao del Norte,Davao del Norte,Region XI,7.45,125.8,1,0,,Compostela Valley,25.08778883635674,True,False,only market in admin2
+Dinagat Islands,Dinagat Islands,Region XIII,10.01,125.57,1,0,,Surigao del Norte,25.63643622068545,True,False,only market in admin2
+Eastern Samar,Eastern Samar,Region VIII,11.61,125.43,1,0,,Leyte,61.63429527118078,True,False,only market in admin2
+Guimaras,Guimaras,Region VI,10.67,122.59,1,0,,Iloilo,3.8974171242958797,True,False,only market in admin2
+Ifugao,Ifugao,Cordillera Administrative region,16.8,121.12,1,0,,Nueva Vizcaya,34.618278112009634,True,False,only market in admin2
+Ilocos Norte,Ilocos Norte,Region I,18.19,120.6,1,0,,Apayao,65.4919080976253,True,False,only market in admin2
+Ilocos Sur,Ilocos Sur,Region I,17.57,120.38,1,0,,Abra,25.65748027010702,True,False,only market in admin2
+Isabela,Isabela,Region II,17.13,121.87000000000002,1,0,,Cagayan,56.47476352526475,True,False,only market in admin2
+Kalinga,Kalinga,Cordillera Administrative region,17.47,121.47,1,0,,Cagayan,32.219062790593206,True,False,only market in admin2
+Laguna,Laguna,Region IV-A,14.290000000000001,121.41,1,0,,Rizal,43.0822076865047,True,False,only market in admin2
+Lanao del Sur,Lanao del Sur,Autonomous region in Muslim Mindanao,8.0,124.28,1,0,,Lanao del Norte,31.577220556854556,True,False,only market in admin2
+Marinduque,Marinduque,Region IV-B,13.45,121.84000000000002,1,0,,Quezon,58.87418205030212,True,False,only market in admin2
+Metro Manila,Metropolitan Manila,National Capital region,14.6,120.98000000000002,1,0,,Rizal,20.44482594753393,False,False,name!=admin2; only market in admin2
+Misamis Occidental,Misamis Occidental,Region X,8.48,123.81,1,0,,Lanao del Norte,45.54384931902054,True,False,only market in admin2
+Mountain Province,Mountain Province,Cordillera Administrative region,17.09,120.97999999999999,1,0,,Ifugao,35.51890832922594,True,False,only market in admin2
+Naga City,Camarines Sur,Region V,13.62,123.18000000000002,1,0,,Camarines Norte,60.45756424019626,False,False,name!=admin2; only market in admin2
+Negros Occidental,Negros Occidental,Region VI,10.67,122.95,1,0,,Guimaras,39.338044734902326,True,False,only market in admin2
+Negros Oriental,Negros Oriental,Region VII,9.31,123.31,1,0,,Siquijor,24.605064283455974,True,False,only market in admin2
+Northern Samar,Northern Samar,Region VIII,12.5,124.64,1,0,,Samar,85.26220509709796,True,False,only market in admin2
+Nueva Vizcaya,Nueva Vizcaya,Region II,16.49,121.15,1,0,,Ifugao,34.618278112009634,True,False,only market in admin2
+Occidental Mindoro,Occidental Mindoro,Region IV-B,13.23,120.59,1,0,,Oriental Mindoro,66.90411516710687,True,False,only market in admin2
+Quezon,Quezon,Region IV-A,13.93,121.61,1,0,,Laguna,45.47078833595859,True,False,only market in admin2
+Quirino,Quirino,Region II,16.52,121.52,1,0,,Nueva Vizcaya,39.58765112295391,True,False,only market in admin2
+Romblon,Romblon,Region IV-B,12.58,122.27,1,0,,Aklan,97.34842225770775,True,False,only market in admin2
+Samar,Samar,Region VIII,11.77,124.88,1,0,,Biliran,58.245794177261004,True,False,only market in admin2
+Sarangani,Sarangani,Region XII,6.1,125.29000000000002,1,0,,South Cotabato,66.31168188425303,True,False,only market in admin2
+Siquijor,Siquijor,Region VII,9.21,123.51000000000002,1,0,,Negros Oriental,24.60506428345737,True,False,only market in admin2
+Sorsogon,Sorsogon,Region V,12.97,124.01000000000002,1,0,,Albay,35.128417968652464,True,False,only market in admin2
+Sultan Kudarat,Sultan Kudarat,Region XII,6.63,124.6,1,0,,South Cotabato,30.68261966859566,True,False,only market in admin2
+Sulu,Sulu,Autonomous region in Muslim Mindanao,6.05,121.0,1,0,,Basilan,143.08174597531325,True,False,only market in admin2
+Surigao del Norte,Surigao del Norte,Region XIII,9.79,125.5,1,0,,Dinagat Islands,25.63643622068545,True,False,only market in admin2
+Tarlac,Tarlac,Region III,15.49,120.59000000000002,1,0,,Nueva Ecija,48.74388175304801,True,False,only market in admin2
+Tawi-Tawi,Tawi-Tawi,Autonomous region in Muslim Mindanao,5.03,119.77,1,0,,Sulu,177.18618962566504,True,False,only market in admin2
+Zambales,Zambales,Region III,15.34,119.97,1,0,,Tarlac,68.52170648613995,True,False,only market in admin2
+Zamboanga Sibugay,Zamboanga Sibugay,Region IX,7.78,122.57999999999998,1,0,,Zamboanga del Sur,50.01522872044104,True,False,only market in admin2
+Zamboanga del Norte,Zamboanga del Norte,Region IX,8.59,123.34,1,0,,Misamis Occidental,53.110476815619435,True,False,only market in admin2
+Lanao del Norte,Lanao del Norte,Region X,8.04,123.8,2,1,53.42565130225619,Misamis Occidental,48.93814108218961,True,False,
+Masbate,Masbate,Region V,12.36,123.63,2,1,44.432293444432915,Sorsogon,79.37457101101367,True,False,
+Bulacan,Bulacan,Region III,14.84,120.81,2,1,36.1333733143901,Metropolitan Manila,32.348749488847794,True,False,
+Davao del Sur,Davao del Sur,Region XI,6.75,125.36,3,2,18.89377650517651,North Cotabato,41.52408874536592,True,False,
+Southern Leyte,Southern Leyte,Region VIII,10.13,124.83,2,1,18.64136349168461,Dinagat Islands,82.10808482907649,True,False,
+Agusan del Norte,Agusan del Norte,Region XIII,9.12,125.55000000000001,2,1,17.926237791883914,Agusan del Sur,69.13975302049066,True,False,
+Nueva Ecija,Nueva Ecija,Region III,15.55,121.09000000000002,3,2,8.449078146361122,Tarlac,53.98405577103544,True,False,
+Palawan,Palawan,Region IV-B,9.78,118.74,2,1,4.447797065782249,Antique,366.6830566251279,True,False,
+Cebu,Cebu,Region VII,10.29,123.9,2,1,2.478432337332825,Bohol,70.1298024522731,True,False,
+Cebu City,Cebu,Region VII,10.31,123.89,2,1,2.478432337332825,Bohol,72.30987952715894,False,False,
+Albay,Albay,Region V,13.15,123.75,2,1,2.4344141441315084,Sorsogon,34.55069415082892,True,False,
+Cagayan,Cagayan,Region II,17.63,121.73,2,1,2.22389853289139,Kalinga,32.80785515790042,True,False,
+Rizal,Rizal,Region IV-A,14.59,121.17,2,1,2.22389853289139,Metropolitan Manila,20.47550580198648,True,False,
+Surigao del Sur,Surigao del Sur,Region XIII,9.06,126.19999999999999,2,1,2.2238985328910363,Agusan del Sur,59.32180523929236,True,False,
+Benguet,Benguet,Cordillera Administrative region,16.45,120.59,3,2,1.7510889539107297,La Union,35.32949974308722,True,False,
+Iloilo City,Iloilo,Region VI,10.7,122.55999999999999,2,1,1.5589353196123918,Guimaras,4.6768816270352636,False,False,
+Iloilo,Iloilo,Region VI,10.69,122.57,2,1,1.5589353196113036,Guimaras,3.11794631021079,True,False,
+South Cotabato,South Cotabato,Region XII,6.5,124.84,2,1,1.1048014960615875,Sultan Kudarat,30.196550043594424,True,False,
+Oriental Mindoro,Oriental Mindoro,Region IV-B,13.41,121.18000000000002,2,1,1.5370921346305433e-12,Batangas,41.02256037369133,True,False,
+Batangas,Batangas,Region IV-A,13.76,121.06000000000002,2,1,1.5348248289046924e-12,Oriental Mindoro,41.022560373690354,True,False,
+Pangasinan,Pangasinan,Region I,16.02,120.23000000000002,2,1,1.51880952002298e-12,Benguet,60.71060789686352,True,False,
+Batangas City,Batangas,Region IV-A,13.76,121.06,2,1,0.0,Oriental Mindoro,41.02256037369084,False,False,
+La Union (Ilocos Region),La Union,Region I,16.62,120.31,2,1,0.0,Benguet,36.23303248552403,False,False,
+Leyte,Leyte,Region VIII,11.25,125.0,2,1,0.0,Samar,59.28124160833857,True,False,
+Misamis Oriental,Misamis Oriental,Region X,8.48,124.65,2,1,0.0,Bukidnon,64.30882633384626,True,False,

@@ -1,5 +1,5 @@
 {
- "_source": "legacy_commodities and legacy_provinces are copied from backend/mercado/commodities.py and geo.py at 6eaeba5 (before the registry). wfp_retail_labels is the 70 retail labels in ~/mercado_audit/universe/commodity_universe.csv (MD5 2440ab74363fb321d317430b09b72453 source).",
+ "_source": "legacy_commodities and legacy_provinces are copied from backend/mercado/commodities.py and geo.py at 6eaeba5 (before the registry). wfp_retail_labels is the 70 retail labels in docs/audit/commodity_universe.csv (MD5 2440ab74363fb321d317430b09b72453 source).",
  "legacy_commodities": [
   {
    "id": "rice",

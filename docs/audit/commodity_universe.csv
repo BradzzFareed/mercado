@@ -1,0 +1,71 @@
+commodity,unit,category,rows,provinces_all,provinces_recent,first_date,last_date,monthly_series,discontinued,series36_2019,history12_35_2019,series_total_2019,series36_2010,history12_35_2010,series_total_2010,series36_2000,history12_35_2000,series_total_2000
+"Rice (regular, milled)",KG,cereals and tubers,8876,80,78,2000-01-15,2026-10-15,80,False,78,0,80,78,0,80,78,0,80
+Eggplants,KG,vegetables and fruits,6370,80,77,2020-05-15,2026-10-15,80,False,77,0,80,77,0,80,77,0,80
+Rice (well milled),KG,cereals and tubers,6378,80,77,2020-05-15,2026-10-15,80,False,77,0,80,77,0,80,77,0,80
+Rice (special),KG,cereals and tubers,6023,79,76,2020-05-15,2026-10-15,79,False,76,0,79,76,0,79,76,0,79
+Meat (pork),KG,"meat, fish and eggs",8534,76,74,2000-01-15,2026-10-15,76,False,74,0,76,74,0,76,74,0,76
+Bitter melon,KG,vegetables and fruits,6024,80,72,2020-05-15,2026-10-15,80,False,72,0,80,72,0,80,72,0,80
+Carrots,KG,vegetables and fruits,7506,80,74,2008-01-15,2026-10-15,80,False,72,2,80,72,2,80,72,2,80
+Fish (milkfish),KG,"meat, fish and eggs",6074,77,72,2020-05-15,2026-10-15,77,False,72,0,77,72,0,77,72,0,77
+Tomatoes,KG,vegetables and fruits,7525,80,73,2008-01-15,2026-10-15,80,False,71,2,80,72,1,80,72,1,80
+Cabbage,KG,vegetables and fruits,7170,80,73,2008-01-15,2026-10-15,80,False,71,2,80,71,2,80,71,2,80
+"Meat (beef, chops with bones)",KG,"meat, fish and eggs",7431,79,71,2008-01-15,2026-10-15,79,False,71,0,79,71,0,79,71,0,79
+Potatoes (Irish),KG,cereals and tubers,6871,80,73,2008-01-15,2026-10-15,80,False,71,2,80,71,2,80,71,2,80
+"Meat (pork, with bones)",KG,"meat, fish and eggs",5707,76,70,2020-05-15,2026-10-15,76,False,70,0,76,70,0,76,70,0,76
+Coconut,KG,vegetables and fruits,5706,79,69,2020-05-15,2026-10-15,79,False,69,0,79,69,0,79,69,0,79
+Fish (roundscad),KG,"meat, fish and eggs",5782,80,68,2020-05-15,2026-10-15,80,False,68,0,80,68,0,80,68,0,80
+Eggs,Unit,"meat, fish and eggs",6855,80,69,2008-01-15,2026-10-15,80,False,67,2,80,67,2,80,67,2,80
+Fish (tilapia),KG,"meat, fish and eggs",5506,73,66,2020-05-15,2026-10-15,73,False,66,0,73,66,0,73,66,0,73
+Bananas (lakatan),KG,vegetables and fruits,5193,78,64,2020-05-15,2026-10-15,78,False,63,1,78,63,1,78,63,1,78
+Squashes,KG,vegetables and fruits,5167,79,63,2020-05-15,2026-10-15,79,False,63,0,79,63,0,79,63,0,79
+Anchovies,KG,"meat, fish and eggs",5004,74,61,2020-05-15,2026-10-15,74,False,61,0,74,61,0,74,61,0,74
+"Meat (chicken, whole)",KG,"meat, fish and eggs",7073,80,61,2008-01-15,2026-10-15,80,False,61,0,80,61,0,80,61,0,80
+Onions (red),KG,vegetables and fruits,6998,79,64,2008-01-15,2026-10-15,79,False,59,5,79,60,4,79,60,4,79
+Meat (beef),KG,"meat, fish and eggs",5215,79,58,2020-05-15,2026-10-15,79,False,58,0,79,58,0,79,58,0,79
+Shrimp (tiger),KG,"meat, fish and eggs",4336,71,53,2020-05-15,2026-10-15,71,False,53,0,71,53,0,71,53,0,71
+Beans (mung),KG,pulses and nuts,5061,78,51,2012-05-15,2026-10-15,78,False,51,0,78,51,0,78,51,0,78
+Choko,KG,vegetables and fruits,4415,79,50,2020-05-15,2026-10-15,79,False,50,0,79,50,0,79,50,0,79
+Ginger,KG,vegetables and fruits,4606,79,63,2020-05-15,2026-10-15,79,False,50,13,79,50,13,79,50,13,79
+Bananas (latundan),KG,vegetables and fruits,4362,79,52,2020-05-15,2026-10-15,79,False,49,3,79,49,3,79,49,3,79
+Crab,KG,"meat, fish and eggs",4143,72,48,2020-05-15,2026-10-15,72,False,48,0,72,48,0,72,48,0,72
+Calamansi,KG,vegetables and fruits,4301,80,58,2020-05-15,2026-10-15,80,False,46,12,80,46,12,80,46,12,80
+Mangoes (carabao),KG,vegetables and fruits,4117,77,45,2020-05-15,2026-10-15,77,False,45,0,77,45,0,77,45,0,77
+Groundnuts (shelled),KG,pulses and nuts,3622,72,41,2020-05-15,2026-10-15,72,False,41,0,72,41,0,72,41,0,72
+Beans (string),KG,vegetables and fruits,3913,79,53,2020-05-15,2026-10-15,79,False,40,13,79,40,13,79,40,13,79
+Garlic,KG,vegetables and fruits,3867,60,39,2008-01-15,2026-10-15,60,False,37,2,59,37,2,60,37,2,60
+"Beans (green, fresh)",KG,vegetables and fruits,3273,79,37,2020-05-15,2026-10-15,79,False,36,1,79,36,1,79,36,1,79
+Cabbage (chinese),KG,vegetables and fruits,3072,78,44,2020-05-15,2026-10-15,78,False,29,15,78,29,15,78,29,15,78
+Bottle gourd,KG,vegetables and fruits,2992,78,27,2020-05-15,2026-10-15,78,False,27,0,78,27,0,78,27,0,78
+Bananas (saba),KG,vegetables and fruits,2295,77,25,2020-05-15,2026-10-15,77,False,25,0,77,25,0,77,25,0,77
+Fish (redbelly yellowtail fusilier),KG,"meat, fish and eggs",1963,60,22,2020-05-15,2026-10-15,60,False,22,0,60,22,0,60,22,0,60
+Fish (slipmouth),KG,"meat, fish and eggs",1912,60,20,2020-05-15,2026-10-15,60,False,20,0,60,20,0,60,20,0,60
+Fish (threadfin bream),KG,"meat, fish and eggs",1599,66,16,2020-05-15,2026-10-15,66,False,16,0,66,16,0,66,16,0,66
+Shrimp (endeavor),KG,"meat, fish and eggs",1511,65,16,2020-05-15,2026-10-15,65,False,16,0,65,16,0,65,16,0,65
+Groundnuts (unshelled),KG,pulses and nuts,1268,50,13,2012-05-15,2026-10-15,50,False,13,0,42,13,0,50,13,0,50
+Eggs (duck),Unit,"meat, fish and eggs",1201,38,12,2020-05-15,2026-10-15,38,False,12,0,38,12,0,38,12,0,38
+Maize (yellow),KG,cereals and tubers,980,28,12,2020-05-15,2026-10-15,28,False,12,0,28,12,0,28,12,0,28
+Pineapples,KG,vegetables and fruits,1412,65,12,2020-05-15,2026-10-15,65,False,12,0,65,12,0,65,12,0,65
+Mandarins,KG,vegetables and fruits,1077,38,11,2020-05-15,2026-10-15,38,False,11,0,38,11,0,38,11,0,38
+Sweet potatoes,KG,cereals and tubers,2954,76,11,2008-01-15,2026-10-15,76,False,11,0,76,11,0,76,11,0,76
+"Fish (mackerel, fresh)",KG,"meat, fish and eggs",1177,64,10,2020-05-15,2026-10-15,64,False,10,0,64,10,0,64,10,0,64
+Semolina (white),KG,cereals and tubers,1052,32,10,2020-05-15,2026-10-15,32,False,10,0,32,10,0,32,10,0,32
+Semolina (yellow),KG,cereals and tubers,1072,52,10,2020-05-15,2026-10-15,52,False,10,0,52,10,0,52,10,0,52
+Sweet Potato leaves,KG,vegetables and fruits,1247,75,9,2020-05-15,2026-10-15,75,False,9,0,75,9,0,75,9,0,75
+Water spinach,KG,vegetables and fruits,1233,74,8,2020-05-15,2026-10-15,74,False,8,0,74,8,0,74,8,0,74
+Fish (frigate tuna),KG,"meat, fish and eggs",998,71,7,2020-05-15,2026-10-15,71,False,7,0,71,7,0,71,7,0,71
+Taro,KG,cereals and tubers,1164,71,7,2020-05-15,2026-10-15,71,False,7,0,71,7,0,71,7,0,71
+Onions (white),KG,vegetables and fruits,2536,74,6,2008-01-15,2026-10-15,74,False,6,0,72,6,0,74,6,0,74
+Mangoes (piko),KG,vegetables and fruits,403,25,4,2020-05-15,2026-10-15,25,False,4,0,25,4,0,25,4,0,25
+"Meat (pork, hock)",KG,"meat, fish and eggs",851,71,4,2020-05-15,2026-10-15,71,False,4,0,71,4,0,71,4,0,71
+Papaya,KG,vegetables and fruits,947,70,4,2020-05-15,2026-10-15,70,False,4,0,70,4,0,70,4,0,70
+Chicken,KG,"meat, fish and eggs",68,9,0,2020-05-15,2020-12-15,9,True,0,0,9,0,0,9,0,0,9
+Fish (fresh),KG,"meat, fish and eggs",1552,17,0,2008-01-15,2019-04-15,17,True,0,0,17,0,0,17,0,0,17
+Garlic (large),KG,vegetables and fruits,170,18,0,2020-05-15,2021-02-15,18,True,0,0,18,0,0,18,0,0,18
+Garlic (small),KG,vegetables and fruits,84,15,0,2020-05-15,2021-02-15,15,True,0,0,15,0,0,15,0,0,15
+Maize (white),KG,cereals and tubers,83,11,0,2020-05-15,2022-04-15,11,True,0,0,11,0,0,11,0,0,11
+"Meat (pork, with fat)",KG,"meat, fish and eggs",156,17,0,2020-05-15,2021-02-15,17,True,0,0,17,0,0,17,0,0,17
+Oil (cooking),750 ML,oil and fats,133,18,0,2020-05-15,2021-02-15,18,True,0,0,18,0,0,18,0,0,18
+"Rice (milled, superior)",KG,cereals and tubers,1427,6,0,2000-01-15,2020-02-15,6,True,0,0,6,0,0,6,0,0,6
+Rice (premium),KG,cereals and tubers,620,64,0,2020-05-15,2021-01-15,64,True,0,0,64,0,0,64,0,0,64
+Sugar (brown),KG,miscellaneous food,161,18,0,2020-05-15,2021-02-15,18,True,0,0,18,0,0,18,0,0,18
+Sugar (white),KG,miscellaneous food,160,18,0,2020-05-15,2021-02-15,18,True,0,0,18,0,0,18,0,0,18
