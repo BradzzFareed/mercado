@@ -9,7 +9,7 @@ Run commands from the relevant app directory, not the repo root.
 Backend (from `backend/`):
 - `uv sync` — install deps into `backend/.venv`
 - `uv run uvicorn main:app --reload` — dev server on http://127.0.0.1:8000 (docs at `/docs`)
-- `uv run pytest -q` — 63 tests in `tests/` (`test_mercado`, `test_registry`, `test_wfp`, `test_ingest`), about 45 s, offline
+- `uv run pytest -q` — 99 tests in `tests/` (`test_mercado`, `test_registry`, `test_wfp`, `test_ingest`, `test_tiers`, `test_perf`, `test_api_fields`), about 45 s, offline
 - Always go through `uv run`; do not rely on a globally installed Python env.
 
 Frontend (from `frontend/`):
@@ -28,6 +28,7 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
 - Backend requires Python **3.14+** (`pyproject.toml`, `backend/.python-version`).
 - `backend/mercado/` is the live forecast engine: `store.py` (SQLite),
   `models.py`/`forecast.py` (Holt-Winters + Ridge + gradient-boosted trees),
+  `tiers.py` (data-driven series tiers: forecast/history/hidden, engine full/quick/none),
   `pipeline.py` (live/wfp/inbox/da/simulate/seed), `scheduler.py`, and static
   reference data (`geo.py`, `commodities.py`, `sample_data.py`). The `simulate` mode
   appends one week via `sample_data.next_week_rows()`; there is no separate simulator module.
@@ -38,6 +39,22 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   seed touch only synthetic series, and real or inbox series are never overwritten by synthetic
   loads. Legacy `sample` and `wfp` labels were relabelled `synthetic` by the migration.
 - The background scheduler is opt-in: set `MERCADO_SCHEDULER=1` to enable it.
+- Series tiers are computed from the data (`tiers.py`), never stored: `forecast`
+  (>= 36 fresh observation months), `history` (12-35 months, fresh), `hidden`
+  (stale, older than 3 months from the dataset's latest real observation, or
+  < 12 months). Real series expose only the 30-day horizon; synthetic keep 7/14/30;
+  requesting an unavailable horizon is a 422 with `available_horizons`. History-only
+  series (engine `none`) serve observed history with an empty forecast on `/forecast`.
+- `/overview`, `/map` and `/compare` never train the full ensemble on demand: cached
+  full result if present, else the quick engine (quick results are not cached).
+  `forecast.warm()` pre-computes full results in a background thread, legacy 10
+  commodities first, then the rest; 1 worker (the engine is GIL-bound, so more
+  threads only add contention). The full-result cache is capped at
+  `CACHE_MAX_ENTRIES` (3000) with oldest-entry eviction, and drops automatically
+  when `store.generation()` moves (any transaction or `store.invalidate()`).
+- `GET /api/v1/coverage` returns the compact series index (arrays, hidden excluded
+  unless `?include_hidden=1`); `/meta` commodities carry additive `source_mix`,
+  `tiers`, `horizons`, `native_step` and appear only with at least one non-hidden series.
 - SQLAlchemy, XGBoost, and joblib are declared in `pyproject.toml` but not imported
   anywhere. The store is still stdlib `sqlite3`, and the `gbm` model is scikit-learn's
   `GradientBoostingRegressor`.

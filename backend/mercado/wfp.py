@@ -1,7 +1,7 @@
 """WFP HDX ingestion primitives: cheap change detection + verified download.
 
-Building blocks only - nothing here runs the pipeline. pipeline.fetch_wfp() keeps
-its own heuristic fetch until it is rewired onto this module.
+Building blocks only - nothing here runs the pipeline. pipeline._prepare_wfp() calls
+fetch_remote_token() and download_verified() inside its own transactional load.
 
 Intended use:
     remote = fetch_remote_token()                # one 14 KB package_show request
