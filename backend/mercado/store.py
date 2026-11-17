@@ -11,6 +11,16 @@ DATA_DIR = os.environ.get("MERCADO_DATA_DIR", os.path.join(os.path.dirname(os.pa
 DB_PATH = os.path.join(DATA_DIR, "mercado.db")
 _lock = threading.RLock()
 _cache = {"df": None, "index": None}
+_gen = {"n": 0}
+
+
+def generation():
+    """Bumped whenever the price data may have changed (any transaction or cache drop).
+
+    Forecast-side caches listen to this so a store change never leaves stale series behind.
+    """
+    with _lock:
+        return _gen["n"]
 
 # prices.source: real (WFP, written by the loader) | synthetic (sample generator) | inbox (CSV inbox).
 # Older databases may still hold 'sample' or 'wfp' labels; migrate() relabels them to 'synthetic'.
@@ -86,6 +96,7 @@ def transaction():
         finally:
             _cache["df"] = None
             _cache["index"] = None
+            _gen["n"] += 1
             con.close()
 
 
@@ -186,6 +197,7 @@ def load():
 def invalidate():
     _cache["df"] = None
     _cache["index"] = None
+    _gen["n"] += 1
 
 
 def last_date():

@@ -139,12 +139,14 @@ def overview(province: str = "ncr"):
 
 
 @API.get("/forecast")
-def fc(province: str = "ncr", commodity: str = "rice"):
+def fc(province: str = "ncr", commodity: str = "rice", horizon: int | None = None):
     _check_prov(province)
     if not _has_commodity(commodity):
         return _err("Unknown province or commodity", 404)
     try:
-        return forecast.detail(province, commodity)
+        return forecast.detail(province, commodity, horizon=horizon)
+    except forecast.HorizonUnavailable as e:
+        return JSONResponse({"error": str(e), "available_horizons": e.available}, status_code=422)
     except ValueError as e:
         return _err(str(e), 422)
 
