@@ -2,7 +2,7 @@
 
 > **How to use this file:** upload it as-is to an LLM to give it working context for this repository. It describes the code as it exists today. If this document and the code disagree, the code wins — fix the document.
 >
-> **Last reviewed:** 2026-11-17 against the code. Backend tests: `117 passed`.
+> **Last reviewed:** 2026-11-18 against the code. Backend tests: `130 passed`.
 
 ---
 
@@ -65,7 +65,13 @@ mercado/
 │       ├── test_mercado.py        # API, forecast and pipeline tests via fastapi.testclient
 │       ├── test_registry.py       # registry integrity and legacy snapshot
 │       ├── test_wfp.py            # wfp.py token and MD5 checks, offline
-│       └── test_ingest.py         # WFP mapping, token skipping, transactions, migration, inbox, offline
+│       ├── test_ingest.py         # WFP mapping, token skipping, transactions, migration, inbox, offline
+│       └── test_setup_script.py   # scripts/setup_live_data.sh and db_state.py checks, offline
+│
+├── scripts/                       # live-data setup (bash, PowerShell); see scripts/README.md
+│   ├── setup_live_data.sh         # primary: install, test, start the server, load WFP, verify
+│   ├── setup_live_data.ps1        # Windows PowerShell 5.1 equivalent
+│   └── db_state.py                # read-only keep/reset decision for backend/data/mercado.db
 │
 └── frontend/
     ├── .env.example               # VITE_API_BASE, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_DEV_BYPASS_AUTH
@@ -261,7 +267,7 @@ Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `pr
 # Backend (from backend/)
 uv sync
 uv run uvicorn main:app --reload        # :8000, docs at /docs
-uv run pytest -q                        # 117 tests, about 45 s, offline (no network needed)
+uv run pytest -q                        # 130 tests, about 5 minutes on a typical dev machine, offline (no network needed)
 
 # Live data (from the repo root; see scripts/README.md)
 bash scripts/setup_live_data.sh         # PowerShell: scripts\setup_live_data.ps1. Keeps an existing DB only if it has a recorded source_token (scripts/db_state.py); otherwise backs it up to ~/mercado_backup and resets it.
@@ -413,6 +419,15 @@ Each (province, commodity) series is tiered from the data (`mercado/tiers.py`), 
 
 Series fields served per row by `/forecast`, `/overview` and `/map`: `source`, `tier`, `engine`, `native_step`, `unit` (from the registry), `confidence` (`normal`, or `low` for the history tier and quick-engine series), `baseline` (the last observed price, i.e. the naive forecast), and `horizons_available`. `/forecast` additionally returns `no_gain_vs_last_price` (`true`/`false`/`null`): computed from the engine's own 10-origin backtest as ensemble MAE >= naive MAE, gated by `NO_GAIN_FLAG_ENABLED` in `mercado/forecast.py`. The A2c agreement check against the A3' accuracy audit failed (the engine's own backtest is in-sample and disagrees with A3'), so the flag ships disabled and the field is always `null`.
 
+**Interval fields.** `/forecast` also returns `interval_label` and `backtest_basis` (additive; `/overview` and `/map` get no new fields):
+
+- `interval_label`: `"80%"` or `null`. Real full-engine series: `"80%"`, measured (below). Synthetic full-engine series: `"80%"`, nominal only (the z-value of an 80% normal band, not measured). Real quick-engine series, inbox series and history-only series: `null`.
+- `backtest_basis`: the data the band's error model was fitted on: `"interpolated_weekly"` (real, full engine), `"synthetic"` (synthetic, full engine), `"weekly"` (inbox, full engine). `null` where there is no backtest (quick engine, history-only).
+
+Real full-engine bands are scaled: `lo`/`hi` = `exp(point ∓ 1.2816 · k · σ)` with `k = INTERVAL_SCALE_REAL = 1.60` (`mercado/forecast.py`). The point forecast, signals, `prob_up` and σ itself are unchanged. Synthetic, inbox and quick bands are not scaled.
+
+*Why.* The engine's 10-origin backtest steps weekly over a monthly series linearly interpolated between real observations. At 80% of origins the last known week is interpolated, so it already slopes toward the next real observation. The backtest errors, and the σ built from them, are too small. *Measured* (`docs/audit/REPORT_A4.md`, 2026-11-18, on a scratch database rebuilt from the cached WFP CSV, MD5 `2440ab74363fb321d317430b09b72453`): with each origin refit on data truncated at that origin (12 origins per series, 200 legacy series split by series into halves A and B), the unscaled 80% band covers 66.0% of held-out origins. The smallest k on a 0.05 grid that reaches 80% on half A is 1.60; on held-out half B it covers **80.4%** overall, with a minimum commodity of 72.5%. The quick engine failed the same rule (rice 60.8% held-out) and stays unscaled. The figures describe the scratch database; the live database is not re-measured.
+
 **Horizon rule.** Requesting a horizon a series does not offer returns **422** with `available_horizons`; nothing is substituted silently.
 
 **History-only series** (engine `none`, known only from observations): `/forecast` returns 200 with the observed history, `forecast: []`, `horizons: {}` and `horizons_available: []`.
@@ -426,3 +441,7 @@ Series fields served per row by `/forecast`, `/overview` and `/map`: `source`, `
 ### 12.5 Errors
 
 Unchanged. Domain failures return `{error}`, and `HTTPException` returns `{detail}`. Requests for a commodity that is in the registry but has no rows return 404 on `/forecast`, `/map` and `/compare`, as unknown ids do.
+
+### 12.6 Note on `docs/audit/`
+
+Paths in `docs/audit/*.md` (for example `~/mercado_audit/...`) refer to the auditor's scratch folder. They are not needed to run the project, and the scripts those reports describe are not part of the repository.

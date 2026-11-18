@@ -22,6 +22,14 @@ CACHE_MAX_ENTRIES = 3000          # oldest cached full result is evicted beyond 
 # and `no_gain_vs_last_price` is always null.
 NO_GAIN_FLAG_ENABLED = False
 
+# Interval calibration for real series, measured in A4 (docs/audit/REPORT_A4.md). Leak-free origins:
+# the engine is refit on the data truncated at each origin. A scale k fitted on half of 200 legacy series
+# reaches 80% pooled coverage at k = 1.60; the other half gives 80.4% held-out (minimum commodity 72.5%).
+# The scale multiplies the log-scale sigma of the full engine on real series only. The quick engine failed
+# the same rule (rice held-out 60.8%), so quick real intervals stay unscaled and carry no label.
+INTERVAL_SCALE_REAL = 1.60
+INTERVAL_LABEL = "80%"
+
 
 class HorizonUnavailable(ValueError):
     """A requested horizon is not available for the series; carries the available list."""
@@ -128,8 +136,9 @@ def _run(province, commodity, mode):
     cur = float(s.values[-1])
     point = np.exp(res.point)
     z = 1.2816
-    lo = np.exp(res.point - z * res.sigma)
-    hi = np.exp(res.point + z * res.sigma)
+    scale = INTERVAL_SCALE_REAL if (mode == "full" and _record(province, commodity).get("source") == "real") else 1.0
+    lo = np.exp(res.point - z * scale * res.sigma)
+    hi = np.exp(res.point + z * scale * res.sigma)
     # Compact cache entry: values + a datetime index; per-call pieces (fdates, history rows)
     # are rebuilt where they are served instead of being stored.
     return dict(values=np.asarray(s.values, dtype=float), dates=s.index, last=s.index[-1].date(),
@@ -159,6 +168,20 @@ def _series_fields(province, commodity, rec, engine, price):
                 native_step=rec.get("native_step"), unit=cm.BY_ID[commodity]["unit"],
                 confidence="low" if (tier == "history" or engine == "quick") else "normal",
                 baseline=price)
+
+
+def _interval_meta(source, engine):
+    """(interval_label, backtest_basis) for a served band. The label is null unless the band is measured or
+    nominal; the basis is null without a backtest (quick and history-only series)."""
+    if engine != "full":
+        return None, None
+    if source == "real":
+        return INTERVAL_LABEL, "interpolated_weekly"
+    if source == "synthetic":
+        return "80%", "synthetic"
+    if source == "inbox":
+        return None, "weekly"
+    return None, None
 
 
 def summary(province, commodity, allow_quick=True):
@@ -274,6 +297,7 @@ def detail(province, commodity, hist_weeks=104, horizon=None):
     out.update(_series_fields(province, commodity, rec, mode, out["current"]))
     out["horizons_available"] = available
     out["no_gain_vs_last_price"] = _no_gain(res) if mode == "full" else None
+    out["interval_label"], out["backtest_basis"] = _interval_meta(rec.get("source"), mode)
     return out
 
 
@@ -298,6 +322,7 @@ def _history_detail(province, commodity, rec):
     out.update(_series_fields(province, commodity, rec, "none", out["current"]))
     out["horizons_available"] = []
     out["no_gain_vs_last_price"] = None
+    out["interval_label"], out["backtest_basis"] = _interval_meta(rec.get("source"), "none")
     return out
 
 
