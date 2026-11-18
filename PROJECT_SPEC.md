@@ -2,7 +2,7 @@
 
 > **How to use this file:** upload it as-is to an LLM to give it working context for this repository. It describes the code as it exists today. If this document and the code disagree, the code wins — fix the document.
 >
-> **Last reviewed:** 2026-11-17 against the code. Backend tests: `63 passed`.
+> **Last reviewed:** 2026-11-17 against the code. Backend tests: `117 passed`.
 
 ---
 
@@ -261,7 +261,10 @@ Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `pr
 # Backend (from backend/)
 uv sync
 uv run uvicorn main:app --reload        # :8000, docs at /docs
-uv run pytest -q                        # 63 tests, about 45 s, offline (no network needed)
+uv run pytest -q                        # 117 tests, about 45 s, offline (no network needed)
+
+# Live data (from the repo root; see scripts/README.md)
+bash scripts/setup_live_data.sh         # PowerShell: scripts\setup_live_data.ps1. Keeps an existing DB only if it has a recorded source_token (scripts/db_state.py); otherwise backs it up to ~/mercado_backup and resets it.
 
 # Frontend (from frontend/)
 pnpm install

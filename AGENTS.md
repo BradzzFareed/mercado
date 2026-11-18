@@ -9,8 +9,10 @@ Run commands from the relevant app directory, not the repo root.
 Backend (from `backend/`):
 - `uv sync` — install deps into `backend/.venv`
 - `uv run uvicorn main:app --reload` — dev server on http://127.0.0.1:8000 (docs at `/docs`)
-- `uv run pytest -q` — 99 tests in `tests/` (`test_mercado`, `test_registry`, `test_wfp`, `test_ingest`, `test_tiers`, `test_perf`, `test_api_fields`), about 45 s, offline
+- `uv run pytest -q` — 117 tests in `tests/` (`test_mercado`, `test_registry`, `test_wfp`, `test_ingest`, `test_tiers`, `test_perf`, `test_api_fields`, `test_setup_script`), about 45 s, offline
 - Always go through `uv run`; do not rely on a globally installed Python env.
+
+Live data (run from the repo root, not `backend/`): `bash scripts/setup_live_data.sh` (PowerShell: `powershell -ExecutionPolicy Bypass -File scripts\setup_live_data.ps1`) installs, tests, starts the server and loads real WFP data. An existing DB is kept only if it has a recorded `source_token` (`scripts/db_state.py`); otherwise it is copied to `~/mercado_backup` and reset first. See `scripts/README.md`.
 
 Frontend (from `frontend/`):
 - `pnpm install`
