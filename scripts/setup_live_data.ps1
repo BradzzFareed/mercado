@@ -89,7 +89,7 @@ function Invoke-Api {
     )
     try {
         $params = @{ Uri = $Url; Method = $Method; UseBasicParsing = $true; TimeoutSec = $TimeoutSec; ErrorAction = 'Stop' }
-        if ($null -ne $Body) { $params.Body = $Body; $params.ContentType = 'application/json' }
+        if (-not [string]::IsNullOrEmpty($Body)) { $params.Body = $Body; $params.ContentType = 'application/json' }
         $r = Invoke-WebRequest @params
         return [pscustomobject]@{ Code = [int]$r.StatusCode; Body = [string]$r.Content; Error = '' }
     } catch {
