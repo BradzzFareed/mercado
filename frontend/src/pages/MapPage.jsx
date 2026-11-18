@@ -13,7 +13,7 @@ export default function MapPage() {
   const key = String(horizon)
   const rows = (data && data.rows) || []
   const cheapest = [...rows].sort((a, b) => a.price - b.price).slice(0, 5)
-  const risers = [...rows].sort((a, b) => b.horizons[key].change_pct - a.horizons[key].change_pct).slice(0, 5)
+  const risers = rows.filter((r) => r.horizons[key]).sort((a, b) => b.horizons[key].change_pct - a.horizons[key].change_pct).slice(0, 5)
   const fastCount = rows.filter((r) => r.engine === 'quick').length
 
   return (
