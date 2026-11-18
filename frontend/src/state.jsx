@@ -11,6 +11,22 @@ export const useApp = () => useContext(Ctx)
 // Poll cadence for detecting external data changes (scheduler or other clients).
 const META_POLL_MS = 60_000
 
+// Horizons a view can offer: the commodity's own list on a commodity page, else the ones every
+// forecastable commodity has. Real series only have 30 days. Null until meta loads.
+export function availableHorizons(meta, arg) {
+  if (!meta) return null
+  const own = arg && meta.commodities.find((c) => c.id === arg)
+  const scope = (own ? [own] : meta.commodities).filter((c) => c.horizons?.length)
+  if (!scope.length) return []
+  return scope[0].horizons.filter((h) => scope.every((c) => c.horizons.includes(h)))
+}
+
+// The saved preference when the view offers it, else the first offered horizon.
+export function resolveHorizon(pref, choices) {
+  if (!choices?.length || choices.includes(pref)) return pref
+  return choices[0]
+}
+
 // ---- hash router: #/board, #/commodity/rice, #/map, #/planner, #/whatif, #/pipeline
 function parseHash() {
   const h = (window.location.hash || '#/board').replace(/^#\/?/, '')
@@ -23,7 +39,7 @@ export function AppProvider({ children }) {
   const [meta, setMeta] = useState(null)
   const [metaError, setMetaError] = useState(null)
   const [province, setProvince] = useState(store('mercado.province', 'ncr'))
-  const [horizon, setHorizon] = useState(store('mercado.horizon', 14))
+  const [horizonPref, setHorizonPref] = useState(store('mercado.horizon', 14))
   const [lang, setLang] = useState(store('mercado.lang', 'en'))
   const [theme, setTheme] = useState(store('mercado.theme', null))
   const [dataVersion, setDataVersion] = useState(0)
@@ -87,7 +103,7 @@ export function AppProvider({ children }) {
   }, [bumpData])
 
   useEffect(() => save('mercado.province', province), [province])
-  useEffect(() => save('mercado.horizon', horizon), [horizon])
+  useEffect(() => save('mercado.horizon', horizonPref), [horizonPref])
   useEffect(() => { save('mercado.lang', lang); document.documentElement.lang = lang === 'fil' ? 'fil' : 'en' }, [lang])
   useEffect(() => {
     if (theme) document.documentElement.setAttribute('data-theme', theme)
@@ -100,9 +116,14 @@ export function AppProvider({ children }) {
 
   const prov = useMemo(() => meta && (meta.provinces.find((p) => p.id === province) || meta.provinces[0]), [meta, province])
   const commodityBy = useMemo(() => (meta ? Object.fromEntries(meta.commodities.map((c) => [c.id, c])) : {}), [meta])
+  const horizonChoices = useMemo(
+    () => availableHorizons(meta, route.page === 'commodity' ? route.arg : null),
+    [meta, route.page, route.arg],
+  )
+  const horizon = resolveHorizon(horizonPref, horizonChoices)
 
   const value = {
-    route, nav, meta, metaError, loadMeta, province: prov ? prov.id : province, prov, setProvince, horizon, setHorizon,
+    route, nav, meta, metaError, loadMeta, province: prov ? prov.id : province, prov, setProvince, horizon, setHorizon: setHorizonPref, horizonChoices,
     lang, setLang, theme, setTheme, t, commodityBy, bumpData, dataVersion,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

@@ -14,11 +14,11 @@ export function PageHead({ title, sub, children }) {
 }
 
 export function HorizonToggle() {
-  const { horizon, setHorizon, t, meta } = useApp()
-  const hs = (meta && meta.horizons) || [7, 14, 30]
+  const { horizon, setHorizon, t, horizonChoices } = useApp()
+  if (!horizonChoices?.length) return null
   return (
     <div className="seg" role="radiogroup" aria-label={t('hz.label')}>
-      {hs.map((h) => (
+      {horizonChoices.map((h) => (
         <button key={h} role="radio" aria-checked={horizon === h} className={horizon === h ? 'on' : ''} onClick={() => setHorizon(h)}>{t('hz.' + h)}</button>
       ))}
     </div>
