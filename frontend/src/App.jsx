@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Component, useEffect, useState } from 'react'
 import { AppProvider, useApp } from './state'
 import { ErrorBox, Training } from './components/Common'
 import { supabase } from './supabaseClient'
@@ -14,6 +14,24 @@ import Layout from './components/Layout'
 
 // Dev-only escape hatch for design work without Supabase credentials.
 const DEV_BYPASS_AUTH = import.meta.env.VITE_DEV_BYPASS_AUTH === '1'
+
+// A render error blanks only the routed page; the Layout shell stays up. The route key remounts it on navigation.
+class PageBoundary extends Component {
+  state = { failed: false }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  render() {
+    return this.state.failed ? <PageFailed /> : this.props.children
+  }
+}
+
+function PageFailed() {
+  const { t } = useApp()
+  return <div className="errorbox" role="alert"><b>{t('common.error')}</b></div>
+}
 
 function AppRouter() {
   const { route, nav, meta, metaError, loadMeta, t } = useApp()
@@ -66,7 +84,7 @@ function AppRouter() {
     <Layout>
       {metaError && <ErrorBox error={metaError} retry={loadMeta} />}
       {!meta && !metaError && <p className="muted">{t('common.loading')}</p>}
-      {page}
+      <PageBoundary key={route.page + '/' + (route.arg ?? '')}>{page}</PageBoundary>
     </Layout>
   )
 }
