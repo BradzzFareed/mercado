@@ -1,4 +1,4 @@
-import { useApp, useApi } from '../state'
+import { useApp, useApi, resolveHorizon } from '../state'
 import { PageHead, HorizonToggle, Training, ErrorBox } from '../components/Common'
 import { SignalChip } from '../components/PriceTag'
 import { ForecastChart, SeasonBars, MultiLine, DriverBars } from '../components/Charts'
@@ -8,7 +8,7 @@ import { peso, pct, fmtDate } from '../util'
 const MODEL_COLORS = { actual: 'var(--ink)', ensemble: 'var(--leaf-line)', naive: 'var(--ink-3)' }
 
 export default function Detail({ id }) {
-  const { province, prov, horizon, t, commodityBy, nav, dataVersion } = useApp()
+  const { province, prov, horizonPref, horizonChoices, t, commodityBy, nav, dataVersion } = useApp()
   const c = commodityBy[id]
   const { data: d, error, loading, reload } = useApi(c ? `/api/v1/forecast?province=${province}&commodity=${id}` : null, [dataVersion])
   const cmp = useApi(c ? `/api/v1/compare?province=${province}&commodity=${id}` : null, [dataVersion])
@@ -16,6 +16,8 @@ export default function Detail({ id }) {
   if (error) return <ErrorBox error={error} retry={reload} />
   if (loading || !d) return <Training />
 
+  const own = d.horizons_available ?? horizonChoices
+  const horizon = resolveHorizon(horizonPref, own)
   const key = String(horizon)
   const hz = d.horizons[key]
   const bb = d.best_buy[key]
@@ -30,7 +32,7 @@ export default function Detail({ id }) {
     <>
       <button className="back" onClick={() => nav('board')}><IconBack size={16} />{t('detail.back')}</button>
       <PageHead title={<><span className="title-icon" aria-hidden="true">{c.icon}</span>{c.name}</>} sub={`${prov.name} · ${prov.market}`}>
-        <HorizonToggle />
+        <HorizonToggle choices={own} value={horizon} />
       </PageHead>
 
       <div className="detail-grid">

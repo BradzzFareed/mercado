@@ -123,7 +123,7 @@ export function AppProvider({ children }) {
   const horizon = resolveHorizon(horizonPref, horizonChoices)
 
   const value = {
-    route, nav, meta, metaError, loadMeta, province: prov ? prov.id : province, prov, setProvince, horizon, setHorizon: setHorizonPref, horizonChoices,
+    route, nav, meta, metaError, loadMeta, province: prov ? prov.id : province, prov, setProvince, horizon, horizonPref, setHorizon: setHorizonPref, horizonChoices,
     lang, setLang, theme, setTheme, t, commodityBy, bumpData, dataVersion,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

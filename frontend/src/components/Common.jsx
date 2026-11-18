@@ -13,13 +13,15 @@ export function PageHead({ title, sub, children }) {
   )
 }
 
-export function HorizonToggle() {
+export function HorizonToggle({ choices, value }) {
   const { horizon, setHorizon, t, horizonChoices } = useApp()
-  if (!horizonChoices?.length) return null
+  const offered = choices ?? horizonChoices
+  const active = value ?? horizon
+  if (!offered?.length) return null
   return (
     <div className="seg" role="radiogroup" aria-label={t('hz.label')}>
-      {horizonChoices.map((h) => (
-        <button key={h} role="radio" aria-checked={horizon === h} className={horizon === h ? 'on' : ''} onClick={() => setHorizon(h)}>{t('hz.' + h)}</button>
+      {offered.map((h) => (
+        <button key={h} role="radio" aria-checked={active === h} className={active === h ? 'on' : ''} onClick={() => setHorizon(h)}>{t('hz.' + h)}</button>
       ))}
     </div>
   )

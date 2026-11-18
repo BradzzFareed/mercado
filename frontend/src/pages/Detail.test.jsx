@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import Detail from './Detail'
 
 const mocks = vi.hoisted(() => ({ app: null, api: null }))
-vi.mock('../state', () => ({ useApp: () => mocks.app, useApi: () => mocks.api }))
+vi.mock('../state', async (importOriginal) => ({ ...(await importOriginal()), useApp: () => mocks.app, useApi: () => mocks.api }))
 vi.mock('../components/Charts', () => ({
   ForecastChart: () => null, SeasonBars: () => null, MultiLine: () => null, DriverBars: () => null, Sparkline: () => null,
 }))
@@ -31,26 +31,36 @@ const realOnly = {
   },
 }
 
-function setup(data, horizon) {
-  mocks.app = { province: 'ncr', prov: { name: 'NCR', market: 'Manila' }, horizon, t: (k) => k, commodityBy: { rice }, nav: () => {}, dataVersion: 0 }
+function setup(data, horizon, horizonChoices = null) {
+  mocks.app = { province: 'ncr', prov: { name: 'NCR', market: 'Manila' }, horizonPref: horizon, horizonChoices, setHorizon: () => {}, t: (k) => k, commodityBy: { rice }, nav: () => {}, dataVersion: 0 }
   mocks.api = { data, error: null, loading: false, reload: () => {} }
 }
 
 describe('Detail with a missing horizon', () => {
-  it('renders a history-only series (horizons {}) without a forecast', () => {
-    setup(base, 14)
+  it('renders a history-only series (horizons {}) without a forecast or a toggle', () => {
+    setup(base, 14, [7, 14, 30])
     const html = renderToStaticMarkup(<Detail id="rice" />)
     expect(html).toContain('detail.now')
+    expect(html).not.toContain('role="radio"')
     expect(html).not.toContain('detail.rise')
     expect(html).not.toContain('detail.best')
     expect(html).not.toContain('detail.lab')
   })
 
-  it('renders a 30-day-only series when the selected horizon is 14', () => {
+  it('resolves a 30-day-only series to 30 when the stored preference is 14', () => {
     setup(realOnly, 14)
     const html = renderToStaticMarkup(<Detail id="rice" />)
     expect(html).toContain('detail.in')
     expect(html).toContain('detail.lab')
-    expect(html).not.toContain('detail.rise')
+    expect(html).toContain('detail.rise')
+  })
+
+  it('offers only the series own horizons, not the cross-province union', () => {
+    setup(realOnly, 14, [7, 14, 30])
+    const html = renderToStaticMarkup(<Detail id="rice" />)
+    expect(html).toContain('hz.30')
+    expect(html).not.toContain('hz.7')
+    expect(html).not.toContain('hz.14')
+    expect(html).toMatch(/aria-checked="true"[^>]*>hz\.30/)
   })
 })
