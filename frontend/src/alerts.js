@@ -9,7 +9,7 @@ export function buildAlerts(items, commodityBy, horizon, t) {
   const out = []
   for (const it of items) {
     const hz = it.horizons[String(horizon)]
-    if (hz.signal === 'stable') continue
+    if (!hz || hz.signal === 'stable') continue
     const c = commodityBy[it.commodity]
     const stockable = c.shelf >= 7
     const vars = { item: c.short, pct: pct(Math.abs(hz.change_pct)).replace(/^[+−]/, ''), days: horizon, shelf: c.shelf, alt: '' }
@@ -20,7 +20,7 @@ export function buildAlerts(items, commodityBy, horizon, t) {
       else {
         key = 'alerts.surge.fresh'
         const alts = items
-          .filter((o) => o.commodity !== it.commodity && sameBasket(commodityBy[o.commodity].group, c.group) && o.horizons[String(horizon)].signal !== 'surge')
+          .filter((o) => o.commodity !== it.commodity && sameBasket(commodityBy[o.commodity].group, c.group) && o.horizons[String(horizon)] && o.horizons[String(horizon)].signal !== 'surge')
           .sort((a, b) => a.horizons[String(horizon)].change_pct - b.horizons[String(horizon)].change_pct)
         if (alts[0]) {
           swap = alts[0].commodity

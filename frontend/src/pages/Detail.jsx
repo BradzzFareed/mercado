@@ -23,7 +23,7 @@ export default function Detail({ id }) {
   const month = new Date(d.as_of + 'T00:00:00').getMonth()
   const lab = d.model_lab
   const best = cmp.data && cmp.data.best_nearby
-  const rows = lab.series.map((r) => ({ date: r.date, actual: r.actual, ensemble: r.ensemble, naive: r.naive }))
+  const rows = lab ? lab.series.map((r) => ({ date: r.date, actual: r.actual, ensemble: r.ensemble, naive: r.naive })) : []
   const modelOrder = ['ensemble', 'gbm', 'ridge', 'holt_winters', 'naive']
 
   return (
@@ -49,6 +49,7 @@ export default function Detail({ id }) {
               <div className="fig"><span>{t('detail.now')}</span><b>{peso(d.current)}<small>{unit}</small></b></div>
               {[7, 14, 30].map((h) => {
                 const x = d.horizons[String(h)]
+                if (!x) return null
                 return (
                   <div key={h} className={'fig' + (h === horizon ? ' on' : '')}>
                     <span>{t('detail.in', { d: h })}</span>
@@ -60,15 +61,15 @@ export default function Detail({ id }) {
               })}
             </div>
           </section>
-        <section className="panel">
+        {d.seasonality && <section className="panel">
           <h2>{t('detail.cal')}</h2>
           <p className="muted">{t('detail.cal.sub')}</p>
           <SeasonBars values={d.seasonality} currentMonth={month} />
-        </section>
+        </section>}
         </div>
 
         <aside className="side-col">
-          <section className={'panel signal-panel ' + hz.signal}>
+          {hz && <section className={'panel signal-panel ' + hz.signal}>
             <SignalChip signal={hz.signal} />
             <p className="signal-hint">{t('sig.' + hz.signal + '.hint')}</p>
             <div className="meter" aria-label={`${t('detail.rise')} ${Math.round(hz.prob_up * 100)}%`}>
@@ -76,18 +77,18 @@ export default function Detail({ id }) {
               <div className="meter-track"><i style={{ width: hz.prob_up * 100 + '%' }} /></div>
             </div>
             <p className="muted small">{t('detail.pctl', { p: Math.round(100 - d.stats.percentile_52w) })}</p>
-          </section>
+          </section>}
 
-          <section className="panel">
+          {bb && <section className="panel">
             <h3>{t('detail.best')}</h3>
             <div className="best">
               <b>{bb.when === 'now' ? t('detail.best.now') : t('detail.best.later', { date: fmtDate(bb.when) })}</b>
               <span>{peso(bb.price)}{unit}</span>
             </div>
             <p className="muted small">{t('detail.best.save', { pct: bb.saves_pct.toFixed(1) + '%' })}</p>
-          </section>
+          </section>}
 
-          <section className="panel">
+          {d.drivers && <section className="panel">
             <h3>{t('detail.why')}</h3>
             <DriverBars items={[
               { label: t('detail.season'), value: d.drivers.seasonal_pct },
@@ -95,7 +96,7 @@ export default function Detail({ id }) {
               { label: t('detail.momentum'), value: d.drivers.momentum_pct },
             ]} />
             <p className="muted small">Estimated split of the {d.drivers.weeks}-week move ({pct(d.drivers.total_pct)}).</p>
-          </section>
+          </section>}
 
           <section className="panel">
             <h3>{t('detail.near')}</h3>
@@ -110,7 +111,7 @@ export default function Detail({ id }) {
         </aside>
       </div>
 
-      <section className="panel lab">
+      {lab && <section className="panel lab">
         <h2>{t('detail.lab')}</h2>
         <p className="muted">{t('detail.lab.sub')}</p>
         <div className="lab-grid">
@@ -144,7 +145,7 @@ export default function Detail({ id }) {
             <p className="muted small">Four-week-ahead predictions versus what actually happened, on weeks the models had not seen.</p>
           </div>
         </div>
-      </section>
+      </section>}
     </>
   )
 }
