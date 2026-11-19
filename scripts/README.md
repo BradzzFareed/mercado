@@ -122,7 +122,8 @@ bash scripts/setup_live_data.sh                  # WSL, Linux, CI
 ```
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\setup_live_data.ps1   # Windows PowerShell
+powershell -ExecutionPolicy Bypass -File scripts\setup_live_data.ps1   # Windows PowerShell 5.1
+pwsh -File scripts\setup_live_data.ps1 # Windows Powershell 7
 ```
 
 Options: `--port N` / `-Port N`, `--skip-tests` / `-SkipTests`, `--force-reset` / `-ForceReset`. See `scripts/README.md` for the steps, the rule that decides whether an existing database is kept or backed up first, and how to stop the server.
