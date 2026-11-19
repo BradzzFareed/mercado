@@ -26,21 +26,25 @@ export default function Planner() {
   const key = String(horizon)
 
   const dishes = meta.dishes.map((d) => {
-    const unitPrice = (it, when) => (when === 'now' ? byC[it.c].price : byC[it.c].horizons[key]?.price)
+    const unitPrice = (it, when) => {
+      const row = byC[it.c]
+      if (!row) return null
+      return when === 'now' ? row.price : row.horizons[key]?.price
+    }
     const cost = (when) => (d.items.some((it) => unitPrice(it, when) == null) ? null : d.other + d.items.reduce((s, it) => s + it.amt * unitPrice(it, when), 0))
     const now = cost('now'), then = cost('then')
     const price = sell[d.id] ?? d.price
     const margin = (p, c) => (c == null ? null : ((p - c) / p) * 100)
     return { ...d, now, then, price, mNow: margin(price, now), mThen: margin(price, then), hold: then == null ? null : then / (1 - target / 100) }
   })
-  const dailyNow = dishes.reduce((s, d) => s + d.now, 0) / dishes.length * servings
+  const dailyNow = dishes.every((d) => d.now != null) ? dishes.reduce((s, d) => s + d.now, 0) / dishes.length * servings : null
   const dailyThen = dishes.every((d) => d.then != null) ? dishes.reduce((s, d) => s + d.then, 0) / dishes.length * servings : null
 
   const shop = meta.commodities.map((c) => {
-    const it = byC[c.id], hz = it.horizons[key] ?? null
+    const it = byC[c.id] ?? null, hz = it ? (it.horizons[key] ?? null) : null
     const q = qty[c.id] ?? 0
     const adv = hz ? advise(c, hz) : null
-    const now = q * it.price, then = hz ? q * hz.price : null
+    const now = it ? q * it.price : null, then = hz ? q * hz.price : null
     // one purchase cycle: stock-up covers up to 2 weeks of stock; waiting avoids paying the higher price once
     let saving = 0
     if (hz && adv.code === 'stock') saving = q * Math.min(2, c.shelf / 7) * (hz.price - it.price)
@@ -49,7 +53,7 @@ export default function Planner() {
   })
   const shopComplete = shop.every((r) => r.hz)
   const totalSave = shopComplete ? shop.reduce((s, r) => s + r.saving, 0) : null
-  const totNow = shop.reduce((s, r) => s + r.now, 0)
+  const totNow = shop.reduce((s, r) => s + (r.now ?? 0), 0)
   const totThen = shopComplete ? shop.reduce((s, r) => s + r.then, 0) : null
 
   return (
@@ -72,8 +76,8 @@ export default function Planner() {
                 <header><h3>{d.name}</h3>{d.mThen == null ? '—' : <span className={'chip ' + (risk ? 'surge' : 'dip')}>{risk ? '▲ ' + t('plan.risk') : '✓ ' + t('plan.ok')}</span>}</header>
                 <p className="dish-items">{d.items.map((i) => i.label).join(' · ')}</p>
                 <div className="dish-nums">
-                  <div><span>{t('plan.cost')} now</span><b>{peso(d.now)}</b></div>
-                  <div><span>In {horizon}d</span><b>{d.then == null ? '—' : peso(d.then)}</b>{d.then != null && <em className={'chg ' + (d.then > d.now ? 'surge' : 'dip')}>{pct((d.then / d.now - 1) * 100)}</em>}</div>
+                  <div><span>{t('plan.cost')} now</span><b>{d.now == null ? '—' : peso(d.now)}</b></div>
+                  <div><span>In {horizon}d</span><b>{d.then == null ? '—' : peso(d.then)}</b>{d.then != null && d.now != null && <em className={'chg ' + (d.then > d.now ? 'surge' : 'dip')}>{pct((d.then / d.now - 1) * 100)}</em>}</div>
                 </div>
                 <label className="field inline"><span>{t('plan.sell')} ₱</span>
                   <input type="number" min="1" value={d.price} onChange={(e) => setSell({ ...sell, [d.id]: +e.target.value || 0 })} />
@@ -82,13 +86,13 @@ export default function Planner() {
                   <i style={{ width: Math.max(0, Math.min(100, d.mThen)) + '%' }} className={risk ? 'risk' : ''} />
                   <u style={{ left: target + '%' }} title={t('plan.target')} />
                 </div>}
-                <p className="muted small">{t('plan.margin')}: {d.mNow.toFixed(0)}% now → <b>{d.mThen == null ? '—' : `${d.mThen.toFixed(0)}%`}</b> in {horizon}d.
+                <p className="muted small">{t('plan.margin')}: {d.mNow == null ? '—' : `${d.mNow.toFixed(0)}%`} now → <b>{d.mThen == null ? '—' : `${d.mThen.toFixed(0)}%`}</b> in {horizon}d.
                   {risk && <> {t('plan.hold', { m: target })}: <b>{peso0(Math.ceil(d.hold))}</b></>}</p>
               </article>
             )
           })}
         </div>
-        <p className="muted small">Daily ingredient cost at {servings} servings a day: <b>{peso0(dailyNow)}</b> now, <b>{dailyThen == null ? '—' : peso0(dailyThen)}</b> in {horizon} days{dailyThen != null && <> ({pct((dailyThen / dailyNow - 1) * 100)})</>}.</p>
+        <p className="muted small">Daily ingredient cost at {servings} servings a day: <b>{dailyNow == null ? '—' : peso0(dailyNow)}</b> now, <b>{dailyThen == null ? '—' : peso0(dailyThen)}</b> in {horizon} days{dailyThen != null && <> ({pct((dailyThen / dailyNow - 1) * 100)})</>}.</p>
       </section>
 
       <section className="panel">
@@ -103,7 +107,7 @@ export default function Planner() {
                   <td><span aria-hidden="true">{r.c.icon}</span> {r.c.short}</td>
                   <td className="num"><input className="qty" type="number" min="0" step="0.5" value={r.q} aria-label={`${r.c.short} per week`}
                     onChange={(e) => setQty({ ...qty, [r.c.id]: +e.target.value || 0 })} /> <small>{r.c.unit === 'dozen' ? 'dz' : 'kg'}</small></td>
-                  <td className="num">{peso0(r.now)}</td>
+                  <td className="num">{r.now == null ? '—' : peso0(r.now)}</td>
                   <td className="num">{r.hz ? <>{peso0(r.then)} <em className={'chg ' + r.hz.signal}>{pct(r.hz.change_pct)}</em></> : '—'}</td>
                   <td>{r.adv ? <span className={'advice ' + r.adv.code}>{t('adv.' + r.adv.code)}</span> : '—'}</td>
                 </tr>

@@ -32,4 +32,20 @@ describe('Planner with a mixed horizon list', () => {
     expect(html).toContain('Adobo')
     expect(html).toContain('—')
   })
+
+  it('renders at 14 when the province has no series for a commodity the planner uses', () => {
+    mocks.app = {
+      province: 'ncr', prov: { name: 'NCR' }, horizon: 14, t: (k) => k, dataVersion: 0,
+      meta: {
+        commodities,
+        dishes: [{ id: 'adobo', name: 'Adobo', price: 120, other: 10, items: [{ c: 'rice', amt: 0.2, label: 'Rice' }, { c: 'pork', amt: 0.3, label: 'Pork' }] }],
+      },
+    }
+    mocks.api = { data: { ...overview, items: [overview.items[0]] }, error: null, loading: false, reload: () => {} }
+    const html = renderToStaticMarkup(<Planner />)
+    expect(html).toContain('Adobo')
+    const porkRow = html.split('<tr').find((r) => r.includes(' Pork</td>'))
+    expect(porkRow).toContain('—')
+    expect(html).toContain('Rice')
+  })
 })
