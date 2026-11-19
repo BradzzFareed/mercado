@@ -19,9 +19,14 @@ export const CATEGORIES = [
 
 const GROUP_CATEGORY = {
   Grains: 'cereals',
+  'Roots & Tubers': 'cereals',
   'Vegetables & Fruit': 'vegetables',
   'Meat & Poultry': 'meat',
   Fish: 'meat',
+  Seafood: 'meat',
+  'Pulses & Nuts': 'pulses',
+  'Oils & Fats': 'oils',
+  'Sugar & Sweeteners': 'misc',
 }
 
 export function categoryOf(commodity) {

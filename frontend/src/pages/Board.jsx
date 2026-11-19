@@ -10,7 +10,7 @@ import { peso0, pct, fmtDate } from '../util'
 import { supabase } from '../supabaseClient'
 
 export default function Board() {
-  const { province, prov, horizon, t, commodityBy, nav, profile } = useApp()
+  const { province, prov, horizon, t, commodityBy, nav, profile, dataVersion } = useApp()
   const [user, setUser] = useState(null)
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export default function Board() {
     return () => { alive = false; sub.subscription.unsubscribe() }
   }, [])
 
-  const { data, error, loading, reload } = useApi(`/api/v1/overview?province=${province}`)
+  const { data, error, loading, reload } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
   const alerts = useMemo(() => (data ? buildAlerts(data.items, commodityBy, horizon, t) : []), [data, commodityBy, horizon, t])
 
   if (error) return <ErrorBox error={error} retry={reload} />

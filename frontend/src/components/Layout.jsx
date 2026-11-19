@@ -4,19 +4,19 @@ import LocationPicker from './LocationPicker'
 import { Logo, IconSun, IconMoon } from './Icons'
 import Avatar from './Avatar'
 import { ROLE, addressLine, displayName, titleCaseRegion } from '../profile'
-import { LogOut, Bell, Menu, X, Globe, MapPin, LayoutGrid, BookOpen, ClipboardList } from 'lucide-react'
+import { LogOut, Bell, Menu, X, Globe, MapPin, LayoutGrid, BookOpen, ClipboardList, Database } from 'lucide-react'
 import { buildAlerts } from '../alerts'
 import NotificationsBell from './NotificationsBell'
 import { supabase } from '../supabaseClient'
 
 // Drawer menu: Profile is reached through the profile card at the top, not a menu row.
 const NAV = [
-  ['board', 'drawer.board', LayoutGrid], ['map', 'drawer.map', BookOpen], ['planner', 'drawer.planner', ClipboardList],
+  ['board', 'drawer.board', LayoutGrid], ['map', 'drawer.map', BookOpen], ['planner', 'drawer.planner', ClipboardList], ['pipeline', 'drawer.pipeline', Database],
 ]
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export default function Layout({ children }) {
-  const { nav, route, t, lang, setLang, theme, setTheme, province, prov, horizon, commodityBy, profile } = useApp()
+  const { nav, route, t, lang, setLang, theme, setTheme, province, prov, horizon, commodityBy, profile, dataVersion } = useApp()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLocOpen, setIsLocOpen] = useState(false)
   const mainRef = useRef(null)
@@ -46,7 +46,7 @@ export default function Layout({ children }) {
   }, [])
 
   // Shared with Board through api.js' per-path promise cache.
-  const { data: overview } = useApi(`/api/v1/overview?province=${province}`)
+  const { data: overview } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
   const alerts = useMemo(
     () => (overview && Object.keys(commodityBy).length ? buildAlerts(overview.items, commodityBy, horizon, t) : []),
     [overview, commodityBy, horizon, t],

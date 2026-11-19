@@ -13,8 +13,8 @@ function usePersisted(key, init) {
 }
 
 export default function Planner() {
-  const { province, prov, horizon, t, meta } = useApp()
-  const { data, error, loading, reload } = useApi(`/api/v1/overview?province=${province}`)
+  const { province, prov, horizon, t, meta, dataVersion } = useApp()
+  const { data, error, loading, reload } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
   const [sell, setSell] = usePersisted('mercado.sell', {})
   const [qty, setQty] = usePersisted('mercado.qty', DEFAULT_QTY)
   const [target, setTarget] = usePersisted('mercado.target', 40)

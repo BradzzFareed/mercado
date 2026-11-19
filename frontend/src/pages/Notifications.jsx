@@ -13,8 +13,8 @@ const TABS = [
 ]
 
 export default function Notifications() {
-  const { province, horizon, t, commodityBy, route } = useApp()
-  const { data } = useApi(`/api/v1/overview?province=${province}`)
+  const { province, horizon, t, commodityBy, route, dataVersion } = useApp()
+  const { data } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
 
   const alerts = useMemo(
     () => (data && Object.keys(commodityBy).length ? buildAlerts(data.items, commodityBy, horizon, t) : []),
@@ -229,7 +229,7 @@ export default function Notifications() {
             </div>
           ))}
 
-          {!visible.length && !fillers && (
+          {visible.length === 0 && (
             <p className="notif-empty">{t('notif.empty')}</p>
           )}
         </div>
