@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 import { get } from './api'
 import { translate } from './i18n'
 import { store, save } from './util'
+import { loadProfile, persistProfile } from './profile'
 
 const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
@@ -23,6 +24,7 @@ export function AppProvider({ children }) {
   const [horizon, setHorizon] = useState(store('mercado.horizon', 14))
   const [lang, setLang] = useState(store('mercado.lang', 'en'))
   const [theme, setTheme] = useState(store('mercado.theme', null))
+  const [profile, setProfile] = useState(loadProfile)
 
   useEffect(() => {
     const on = () => setRoute(parseHash())
@@ -47,13 +49,19 @@ export function AppProvider({ children }) {
 
   const t = useCallback((k, v) => translate(lang, k, v), [lang])
   const nav = useCallback((page, arg) => { window.location.hash = '/' + page + (arg ? '/' + arg : ''); window.scrollTo(0, 0) }, [])
+  const updateProfile = useCallback((next) => {
+    setProfile((prev) => {
+      const merged = { ...prev, ...next }
+      return persistProfile(merged)
+    })
+  }, [])
 
   const prov = useMemo(() => meta && (meta.provinces.find((p) => p.id === province) || meta.provinces[0]), [meta, province])
   const commodityBy = useMemo(() => (meta ? Object.fromEntries(meta.commodities.map((c) => [c.id, c])) : {}), [meta])
 
   const value = {
     route, nav, meta, metaError, loadMeta, province: prov ? prov.id : province, prov, setProvince, horizon, setHorizon,
-    lang, setLang, theme, setTheme, t, commodityBy,
+    lang, setLang, theme, setTheme, t, commodityBy, profile, updateProfile,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

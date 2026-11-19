@@ -50,7 +50,10 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   theme toggles, logout). Pages render content only; do not add a header, drawer, or
   full-page background inside a page.
 - Routing is a hand-rolled hash router in `src/state.jsx` (`#/board`,
-  `#/commodity/<id>`, `#/map`, ...). `App.jsx` adds a Supabase session guard.
+  `#/commodity/<id>`, `#/map`, `#/profile`, ...). `App.jsx` adds a Supabase session
+  guard. The profile page (`pages/Profile.jsx`) edits a local draft stored by
+  `src/profile.js` (localStorage key `mercado.profile`); `updateProfile` commits it
+  and the drawer card in `Layout.jsx` reads the same saved values.
 
 ## Integration
 

@@ -6,6 +6,7 @@ import Board from './pages/Board'
 import Detail from './pages/Detail'
 import MapPage from './pages/MapPage'
 import Planner from './pages/Planner'
+import Profile from './pages/Profile'
 import Auth from './pages/Auth'
 import Layout from './components/Layout'
 
@@ -53,6 +54,7 @@ function AppRouter() {
     if (route.page === 'commodity') page = <Detail key={route.arg} id={route.arg} />
     else if (route.page === 'map') page = <MapPage />
     else if (route.page === 'planner') page = <Planner />
+    else if (route.page === 'profile') page = <Profile />
     else page = <Board />
   }
 

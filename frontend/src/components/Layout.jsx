@@ -2,17 +2,20 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useApp, useApi } from '../state'
 import LocationPicker from './LocationPicker'
 import { Logo, IconSun, IconMoon } from './Icons'
-import { LogOut, Bell, Menu, X, Globe, MapPin, LayoutGrid, BookOpen, ClipboardList, UserRound } from 'lucide-react'
+import Avatar from './Avatar'
+import { ROLE, addressLine, displayName, titleCaseRegion } from '../profile'
+import { LogOut, Bell, Menu, X, Globe, MapPin, LayoutGrid, BookOpen, ClipboardList } from 'lucide-react'
 import { buildAlerts } from '../alerts'
 import { supabase } from '../supabaseClient'
 
+// Drawer menu: Profile is reached through the profile card at the top, not a menu row.
 const NAV = [
-  ['board', 'nav.board', LayoutGrid], ['map', 'nav.map', BookOpen], ['planner', 'nav.planner', ClipboardList],
+  ['board', 'drawer.board', LayoutGrid], ['map', 'drawer.map', BookOpen], ['planner', 'drawer.planner', ClipboardList],
 ]
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
 export default function Layout({ children }) {
-  const { nav, route, t, lang, setLang, theme, setTheme, province, prov, horizon, commodityBy } = useApp()
+  const { nav, route, t, lang, setLang, theme, setTheme, province, prov, horizon, commodityBy, profile } = useApp()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLocOpen, setIsLocOpen] = useState(false)
   const [jumpToAlerts, setJumpToAlerts] = useState(false)
@@ -51,7 +54,8 @@ export default function Layout({ children }) {
   // Sliding active pill behind the drawer nav items.
   const measurePill = useCallback(() => {
     const el = navRefs.current[active]
-    if (el) setPill({ top: el.offsetTop, height: el.offsetHeight })
+    // No menu row for the current page (e.g. Profile): hide the pill instead of leaving it stale.
+    setPill(el ? { top: el.offsetTop, height: el.offsetHeight } : null)
   }, [active])
   useEffect(() => {
     measurePill()
@@ -62,10 +66,13 @@ export default function Layout({ children }) {
     return () => { clearTimeout(t); window.removeEventListener('resize', measurePill) }
   }, [measurePill, isMenuOpen, lang])
 
-  // Drawer profile display name/location/role. Placeholder wiring for now.
-  const profileName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Guest'
-  const profileInitials = profileName.split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
-  const profileRole = user?.user_metadata?.role || 'Customer'
+  // Drawer profile card. Names/address come from the saved profile (see profile.js);
+  // the Supabase auth user is only a fallback before the first save.
+  const fallbackName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Guest'
+  const fallbackShort = fallbackName.trim().split(/\s+/).filter(Boolean)
+  const profileName = displayName(profile) || (fallbackShort.length > 1 ? `${fallbackShort[0]} ${fallbackShort[fallbackShort.length - 1]}` : fallbackName)
+  const profileLocation = addressLine(profile) || (prov ? `${prov.name}, ${titleCaseRegion(prov.region)}` : '—')
+  const profileRole = ROLE
 
   const closeMenu = () => setIsMenuOpen(false)
   const goBoard = () => { closeMenu(); nav('board') }
@@ -214,7 +221,11 @@ export default function Layout({ children }) {
           border: 1.5px solid ${dark ? 'rgba(255,255,255,0.35)' : '#0a3d2e'}; border-radius: 16px;
           padding: 1.25rem 1rem; text-align: center; margin-bottom: 2.5rem;
           display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+          width: 100%; background: ${dark ? 'rgba(255,255,255,0.03)' : '#f1fff9'};
+          font-family: inherit; color: inherit; cursor: pointer;
+          transition: border-color 0.2s, background-color 0.2s, transform 0.2s;
         }
+        .profile-card:hover { border-color: #10b981; transform: translateY(-2px); }
         .profile-avatar {
           width: 64px; height: 64px; border-radius: 50%; margin-bottom: 0.75rem;
           background: ${dark ? 'rgba(255,255,255,0.12)' : '#dbeafe'};
@@ -222,8 +233,9 @@ export default function Layout({ children }) {
           display: flex; align-items: center; justify-content: center;
           font-weight: 700; font-size: 1.25rem; overflow: hidden;
         }
-        .profile-name { font-weight: 800; font-size: 1.05rem; color: ${textMain}; }
-        .profile-meta { font-size: 0.8rem; color: ${textMuted}; }
+        .profile-avatar .avatar-svg { width: 100%; height: 100%; display: block; }
+        .profile-name { font-weight: 800; font-size: 1.05rem; color: ${textMain}; text-align: center; overflow-wrap: anywhere; }
+        .profile-meta { font-size: 0.8rem; color: ${textMuted}; text-align: center; }
 
         .drawer-nav-block { position: relative; margin-top: 1.5rem; }
         .drawer-nav-list { display: flex; flex-direction: column; gap: 0.35rem; list-style: none; padding: 0; margin: 0; position: relative; z-index: 1; }
@@ -250,15 +262,7 @@ export default function Layout({ children }) {
         }
         @keyframes loc-pop-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
         
-        .drawer-nav-list { display: flex; flex-direction: column; gap: 0.25rem; list-style: none; padding: 0; margin: 0; }
-        .drawer-nav-item { display: flex; align-items: center; gap: 1rem; padding: 0.85rem 1rem; color: ${textMuted}; background: transparent; border-radius: 8px; font-weight: 500; font-size: 0.95rem; cursor: pointer; border: none; width: 100%; text-align: left; transition: color 0.2s, background-color 0.2s; }
-        .drawer-nav-item:hover { color: ${textMain}; background: ${hoverBg}; }
-        .drawer-nav-item.active { color: #022c22; background: #10b981; font-weight: 600; }
-        
-        .drawer-footer { margin-top: auto; padding-top: 1.5rem; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid ${borderSubtle}; }
-        .footer-action { display: flex; align-items: center; gap: 0.5rem; background: transparent; border: none; color: ${textMuted}; font-size: 0.9rem; cursor: pointer; transition: color 0.2s; }
-        .footer-action:hover { color: ${textMain}; }
-        
+
         .page-content-wrapper { padding: 2.5rem 3rem; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; position: relative; z-index: 1; }
 
         @media (prefers-reduced-motion: reduce) {
@@ -281,15 +285,22 @@ export default function Layout({ children }) {
           <button className="hamburger-btn" onClick={closeMenu} aria-label={t('menu.close')}><X size={22} /></button>
         </div>
 
-        {/* Profile card. Data is placeholder-wired; see integration note at the bottom of this file. */}
-        <div className="profile-card">
-          <div className="profile-avatar" aria-hidden="true">
-            {profileInitials ? profileInitials : <UserRound size={30} />}
-          </div>
-          <div className="profile-name">{profileName}</div>
-          <div className="profile-meta">{prov ? prov.name : '—'}</div>
-          <div className="profile-meta">{profileRole}</div>
-        </div>
+        {/* Profile card — click opens the profile page. */}
+        <button
+          type="button"
+          className="profile-card"
+          onClick={() => { closeMenu(); nav('profile') }}
+          aria-label={`Open profile for ${profileName}`}
+        >
+          <span className="profile-avatar">
+            <Avatar id={profile.avatar} />
+          </span>
+          <span className="profile-name" style={{ fontSize: profileName.length > 26 ? '0.95rem' : profileName.length > 20 ? '1.02rem' : '1.08rem' }}>
+            {profileName}
+          </span>
+          <span className="profile-meta">{profileLocation}</span>
+          <span className="profile-meta">{profileRole}</span>
+        </button>
 
         <div className="drawer-nav-block">
           <div className="nav-pill" style={{ top: pill?.top ?? 0, height: pill?.height ?? 0, opacity: pill ? 1 : 0 }} aria-hidden="true" />
@@ -312,7 +323,7 @@ export default function Layout({ children }) {
                 className="drawer-nav-item"
                 onClick={goAlerts}
               >
-                <Bell size={18} /> {t('alerts.title')}
+                <Bell size={18} /> {t('drawer.alerts')}
               </button>
             </li>
           </ul>
@@ -372,23 +383,20 @@ export default function Layout({ children }) {
 }
 
 /*
- * PROFILE DATA — how to hook this up to a real backend later:
+ * PROFILE DATA — where it lives now:
  *
- * Right now `profileName` / `profileRole` fall back to the Supabase auth user
- * (`user_metadata.full_name`, `user_metadata.role`) and the location line shows
- * the currently selected market (`prov.name`). To make it real:
+ * `src/profile.js` owns the saved shape (name parts, age, gender, birthday,
+ * address/province/region, email, about, avatar) and persists it to
+ * localStorage under `mercado.profile`. `AppProvider` exposes `profile` and
+ * `updateProfile(patch)`; `pages/Profile.jsx` edits a draft and only commits on
+ * Save, so this drawer card always reflects saved values:
+ *   - name      -> first + last only (no middle name)
+ *   - location  -> "Province, Region" from meta.regions/provinces
+ *   - role      -> always "Customer"
+ *   - avatar    -> inline SVG from `src/avatars.js`
  *
- * 1. Supabase (fastest): add columns to a `profiles` table keyed by user id
- *    (full_name, region, role, avatar_url) and read it after login, OR just use
- *    Supabase Auth `user_metadata` (updatable via supabase.auth.updateUser()).
- *    - Avatar: store an image in Supabase Storage (`avatars` bucket, public) and
- *      put its URL in `avatar_url`; render <img> in .profile-avatar instead of
- *      the initials fallback when a url exists.
- * 2. Custom FastAPI (if you move away from Supabase): add an endpoint in
- *    backend/main.py under /api/v1 (e.g. GET/PUT /api/v1/profile) backed by a
- *    SQLite table in mercado/store.py, then fetch it here with useApi() and a
- *    mutual key (email or sub id) to join with the auth user.
- * 3. When editing is needed, add a Profile page route in state.jsx + App.jsx and
- *    a nav entry in NAV; the drawer card can link to it.
+ * To sync across devices, replace loadProfile()/persistProfile() in profile.js
+ * with a backend call (GET/PUT /api/v1/profile) or read/write Supabase user
+ * metadata; Profile.jsx already mirrors saves into supabase.auth.updateUser().
  */
 

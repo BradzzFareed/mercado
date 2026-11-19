@@ -1,6 +1,7 @@
 // English / Filipino UI strings. Missing Filipino keys fall back to English.
 const en = {
-  'nav.board': 'Price board', 'nav.map': 'Price map', 'nav.planner': 'Carinderia planner',
+  'nav.board': 'Price board', 'nav.map': 'Price map', 'nav.planner': 'Carinderia planner', 'nav.profile': 'Profile',
+  'drawer.board': 'Price Comparison', 'drawer.map': 'Market Locator', 'drawer.planner': 'Grocery Cart', 'drawer.alerts': 'Notification',
   'loc.title': 'Your palengke', 'loc.region': 'Region', 'loc.province': 'Province / market', 'loc.near': 'Use my location',
   'hz.label': 'Look ahead', 'hz.7': '7 days', 'hz.14': '14 days', 'hz.30': '30 days',
   'sig.surge': 'Price surge', 'sig.dip': 'Price dip', 'sig.stable': 'Steady',
@@ -40,7 +41,8 @@ const en = {
   'logout': 'Logout', 'menu.open': 'Open menu', 'menu.close': 'Close menu', 'menu.label': 'Main menu', 'skip': 'Skip to content',
 }
 const fil = {
-  'nav.board': 'Presyuhan', 'nav.map': 'Mapa ng presyo', 'nav.planner': 'Planner ng karinderya',
+  'nav.board': 'Presyuhan', 'nav.map': 'Mapa ng presyo', 'nav.planner': 'Planner ng karinderya', 'nav.profile': 'Profile',
+  'drawer.board': 'Paghahambing ng Presyo', 'drawer.map': 'Tagahanap ng Pamilihan', 'drawer.planner': 'Grocery Cart', 'drawer.alerts': 'Abiso',
   'loc.title': 'Iyong palengke', 'loc.region': 'Rehiyon', 'loc.province': 'Probinsya / pamilihan', 'loc.near': 'Gamitin ang lokasyon ko',
   'hz.label': 'Tanaw', 'hz.7': '7 araw', 'hz.14': '14 araw', 'hz.30': '30 araw',
   'sig.surge': 'Tataas ang presyo', 'sig.dip': 'Bababa ang presyo', 'sig.stable': 'Matatag',
