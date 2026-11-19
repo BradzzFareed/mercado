@@ -18,6 +18,7 @@ Frontend (from `frontend/`):
 - `pnpm install`
 - `pnpm dev` — http://localhost:5173
 - `pnpm lint` — ESLint over the whole frontend
+- `pnpm test` — Vitest unit tests (`node` environment; no jsdom, so keep tests free of DOM APIs)
 - `pnpm build`
 
 There is no backend linter/formatter config and no TypeScript (frontend is JS/JSX).
@@ -72,11 +73,24 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   `VITE_SUPABASE_ANON_KEY`; copy `frontend/.env.example` to `frontend/.env`. Without
   those values it logs a warning and exports `supabase = null` (it does not throw).
   For UI work without credentials, set `VITE_DEV_BYPASS_AUTH=1`.
+- Google sign-in calls `supabase.auth.signInWithOAuth({ provider: 'google' })` from `pages/Auth.jsx`.
+  The Supabase project needs the Google provider enabled and the app origin in its redirect URLs.
+- Profile: `src/profile.js` owns the profile shape, validators, and Supabase metadata mapping.
+  With a session, `state.jsx` hydrates it from `user_metadata` (`profileFromUser`, merged with
+  `mergeProfile`) and keeps a copy in `localStorage` under `mercado.profile.<userId>`. The Profile
+  page saves through `updateProfile()` and then `supabase.auth.updateUser({ data: profileMetadata(next) })`.
+- Notifications: `src/notifications.js` keeps read state (`new`, `done`, `deleted`) in `localStorage`
+  under `mercado.notifications`, one record per `commodity:signal`. Alerts come from `buildAlerts()`
+  on the overview, and `NotificationsBell` and `pages/Notifications.jsx` share the same store.
+- `model_lab` is still returned by `/api/v1/forecast`, and `Detail.jsx` renders it as an inline panel.
+  There is no standalone Model Lab page and no What-If page; the Pipeline page is at `#/pipeline`.
 - `components/Layout.jsx` is the only app shell (header, drawer, nav, language and
-  theme toggles, logout). Pages render content only; do not add a header, drawer, or
+  theme toggles, logout). The drawer holds the profile card (opens `#/profile`), the nav
+  links, and `NotificationsBell`. Pages render content only; do not add a header, drawer, or
   full-page background inside a page.
 - Routing is a hand-rolled hash router in `src/state.jsx` (`#/board`,
-  `#/commodity/<id>`, `#/map`, ...). `App.jsx` adds a Supabase session guard.
+  `#/commodity/<id>`, `#/map`, `#/planner`, `#/pipeline`, `#/profile`, `#/notifications`,
+  `#/auth`). `App.jsx` adds a Supabase session guard.
 
 ## Integration
 
@@ -88,8 +102,9 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   If the Vite port changes, update both sides.
 - `frontend/src/api.js` is an axios wrapper that surfaces backend `{error}` bodies
   (and FastAPI `{detail}`) as `Error.message`. It caches GET promises per path for the
-  page session. After a pipeline run that does not come from the Pipeline page, call
-  `clearCache()` or fetch with `{fresh: true}`, or the UI stays stale.
+  page session. Runs from the scheduler or another client are picked up by the `/meta`
+  `data_version` poll (every 60 s while the tab is visible), which calls `bumpData()`. Code that needs
+  an immediate refresh should still call `clearCache()` or fetch with `{fresh: true}`.
 
 ## Environment
 

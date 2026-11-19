@@ -8,7 +8,7 @@
 
 ## 1. What the project is
 
-Mercado forecasts retail food prices in the Philippines at province level. A user picks a province and sees current prices, 7/14/30-day forecasts with an 80% band, and surge/dip/stable signals for 10 basic commodities. Secondary features: a price map, a carinderia (small eatery) menu-cost planner, a what-if lab (typhoon and fuel sliders), a model-accuracy lab, and a pipeline control panel.
+Mercado forecasts retail food prices in the Philippines at province level. A user picks a province and sees current prices, 7/14/30-day forecasts with an 80% band, and surge/dip/stable signals for 10 basic commodities. Secondary features: a price map, a carinderia (small eatery) menu-cost planner, a data pipeline control panel, a user profile with an avatar, and buying-alert notifications. The commodity detail page also shows an inline model-accuracy panel.
 
 It is a **two-app repository with no root workspace**:
 
@@ -87,7 +87,10 @@ mercado/
         ├── supabaseClient.js      # supabase client, or null when env vars are missing
         ├── i18n.js                # English / Filipino strings; translate()
         ├── alerts.js              # buildAlerts(), advise()
-        ├── util.js                # peso, pct, fmtDate, classify, store/save, changeColor, …
+        ├── profile.js             # profile shape, Supabase metadata mapping, localStorage copy, validators
+        ├── notifications.js       # notification store (mercado.notifications), category mapping, chime
+        ├── avatars.js             # avatar catalogue (avatar-1 … avatar-8) and URL helpers
+        ├── util.js                # peso, pct, fmtDate, store/save, changeColor, …
         ├── index.css              # @import "tailwindcss";
         ├── styles.css             # legacy design system (tokens, layout, component classes)
         ├── pages/
@@ -96,9 +99,9 @@ mercado/
         │   ├── Detail.jsx         # commodity detail: forecast chart, stats, drivers, backtest
         │   ├── MapPage.jsx        # Philippines map and regional legend
         │   ├── Planner.jsx        # carinderia menu costing and shopping list (localStorage)
-        │   ├── WhatIf.jsx         # typhoon and fuel sliders over the forecast
-        │   ├── ModelLab.jsx       # ensemble vs naive accuracy per commodity
-        │   └── Pipeline.jsx       # dataset info, scheduler state, run-now per mode
+        │   ├── Pipeline.jsx       # dataset info, scheduler state, run-now per mode
+        │   ├── Profile.jsx        # personal details, avatar picker, saves to Supabase metadata and localStorage
+        │   └── Notifications.jsx  # buying alerts with new / done / deleted tabs and bulk actions
         └── components/
             ├── Layout.jsx         # app shell: header, drawer, nav, LocationPicker, language/theme toggles, logout
             ├── Common.jsx         # PageHead, HorizonToggle, Training, ErrorBox, SampleBadge
@@ -107,6 +110,9 @@ mercado/
             ├── PhilippinesMap.jsx # SVG dot-matrix map
             ├── Pinmarker.jsx      # map pin
             ├── LocationPicker.jsx # province / market picker
+            ├── NotificationsBell.jsx # header bell with the buying-alert popup
+            ├── Avatar.jsx         # avatar image or illustrated fallback
+            ├── AvatarPicker.jsx   # grid of the eight avatar illustrations
             └── Icons.jsx          # inline SVG icons and Logo
 ```
 
@@ -213,13 +219,13 @@ Page component → useApi(path, deps) → api.get(path) → axios → Vite proxy
 
 `src/state.jsx` provides a hand-rolled hash router and one context from `AppProvider`.
 
-Routes, handled in `App.jsx`: `#/board`, `#/commodity/<id>`, `#/map`, `#/planner`, `#/whatif`, `#/lab`, `#/pipeline`, `#/auth`. `nav(page, arg)` sets the hash and scrolls to the top.
+Routes, handled in `App.jsx`: `#/board`, `#/commodity/<id>`, `#/map`, `#/planner`, `#/pipeline`, `#/profile`, `#/notifications`, `#/auth`. `nav(page, arg)` sets the hash and scrolls to the top.
 
-Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `prov`, `setProvince`, `horizon`, `setHorizon`, `lang`, `setLang`, `theme`, `setTheme`, `t`, `commodityBy`, `dataVersion`, `bumpData`.
+Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `prov`, `setProvince`, `horizon`, `horizonPref`, `setHorizon`, `horizonChoices`, `lang`, `setLang`, `theme`, `setTheme`, `t`, `commodityBy`, `dataVersion`, `bumpData`, `profile`, `updateProfile`.
 
-`localStorage` keys: `mercado.province` (default `ncr`), `mercado.horizon` (default 14), `mercado.lang`, `mercado.theme`. The Planner also stores `mercado.sell`, `mercado.qty`, `mercado.target`, and `mercado.servings`.
+`localStorage` keys: `mercado.province` (default `ncr`), `mercado.horizon` (default 14), `mercado.lang`, `mercado.theme`. The Planner also stores `mercado.sell`, `mercado.qty`, `mercado.target`, and `mercado.servings`. The profile is stored as `mercado.profile.<userId>` (or `mercado.profile` before a user is known), and notification read state is stored as `mercado.notifications`.
 
-`loadMeta` re-fetches `/meta` whenever `dataVersion` changes.
+`/meta` is polled every 60 seconds while the tab is visible. When its `data_version` changes (a scheduler run, or a pipeline run from another client), `bumpData()` clears the API cache and increments `dataVersion`, which re-fetches every view that lists it in its `useApi` deps. `loadMeta` itself runs on mount and on error retry.
 
 ### 6.3 Authentication and shell
 
@@ -232,6 +238,12 @@ Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `pr
 `VITE_DEV_BYPASS_AUTH=1` skips the gate for UI work without credentials. `supabaseClient.js` logs a warning and exports `supabase = null` when `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` is missing. It does not throw.
 
 `Layout.jsx` is the **only** app shell. It provides the header, the side drawer, navigation links, the `LocationPicker`, the language toggle, the theme toggle, and logout (`supabase.auth.signOut()`, then `nav('auth')`). Pages render content only and must not add their own header, drawer, or full-page background.
+
+**Profile.** With a Supabase session, `state.jsx` reads `user_metadata` through `profileFromUser()`, merges it with the device copy via `mergeProfile()` (metadata wins, local fills blanks), and stores the result as `mercado.profile.<userId>`. `updateProfile()` updates that local copy. The Profile page then writes the full shape back with `supabase.auth.updateUser({ data: profileMetadata(next) })`, so the next sign-in on another device restores it. The drawer's profile card shows the saved name and avatar, and falls back to the user's metadata when no saved name exists.
+
+**Notifications.** `Layout.jsx` builds buying alerts from `/api/v1/overview` with `buildAlerts()` and passes them to `NotificationsBell`, which also backs the `#/notifications` page. `useNotificationList()` syncs alerts into `mercado.notifications`, one record per `commodity:signal`. Each record has a status of `new`, `done`, or `deleted`. Only the Deleted tab removes a record for good. Notification state stays on the device and is not synced to Supabase.
+
+**Google sign-in.** `Auth.jsx` calls `supabase.auth.signInWithOAuth({ provider: 'google' })` with `redirectTo: window.location.origin`. The Supabase project must have the Google provider enabled and the app origin in its redirect URLs.
 
 ### 6.4 Styling
 
@@ -251,13 +263,13 @@ Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `pr
 | Route | Page | Purpose |
 |---|---|---|
 | `#/board` | `Board.jsx` | Basket total and surge/dip counts, price tags with sparklines, alerts, horizon toggle |
-| `#/commodity/<id>` | `Detail.jsx` | Forecast chart, stats, drivers, seasonality, model members, backtest, nearby cheaper markets |
+| `#/commodity/<id>` | `Detail.jsx` | Forecast chart, stats, drivers, seasonality, inline model-accuracy panel (the `model_lab` payload), nearby cheaper markets |
 | `#/map` | `MapPage.jsx` | Map colored by expected change at the selected horizon; click a province to select it |
 | `#/planner` | `Planner.jsx` | Menu costing, margin at risk, shopping list |
-| `#/whatif` | `WhatIf.jsx` | Typhoon (0–1) and fuel (−20…+60%) sliders over the forecast |
-| `#/lab` | `ModelLab.jsx` | Ensemble vs naive MAPE and direction accuracy per commodity |
 | `#/pipeline` | `Pipeline.jsx` | Dataset and scheduler state, run-now per mode, run history |
-| `#/auth` | `Auth.jsx` | Supabase sign in and sign up |
+| `#/profile` | `Profile.jsx` | Personal details with validation, avatar picker; saved to Supabase metadata and localStorage |
+| `#/notifications` | `Notifications.jsx` | Buying alerts with new / done / deleted tabs, search, and bulk actions |
+| `#/auth` | `Auth.jsx` | Supabase sign in and sign up, including Google OAuth |
 
 ---
 
@@ -305,13 +317,12 @@ Frontend environment (`frontend/.env`):
 ## 8. Known issues
 
 1. **`da` pipeline mode is incomplete.** `pipeline.py` finds PDF report links, but PDF table parsing is not implemented. The parser stub raises `NotImplementedError`, and `run()` logs that nothing was imported.
-2. **Client cache can serve stale data after a pipeline run.** `api.js` keeps promises for the lifetime of the page. The Pipeline page calls `clearCache()` and `bumpData()` after its own runs, but runs started by the scheduler or from another tab do not reach the cache. Those views stay stale until a full page reload.
-3. **What-If signal thresholds differ from the backend.** `util.js` `classify()` uses a fixed ±2.5%. The backend uses `max(2.5, 0.5 × σ%)`, so a high-volatility series can show different signals in the lab than on the board. The `classify` comment says the thresholds are the same, which is not true when σ is large.
-4. **No frontend tests.** `package.json` has `dev`, `build`, `lint`, and `preview` scripts only.
-5. **Pytest emits a Starlette deprecation warning** about `httpx` inside `TestClient`. It is not a failure.
-6. **`pnpm build` warns about a chunk over 500 kB.** It is not a failure.
-7. **Board's scoped styles use hardcoded light-on-dark colors.** This is a follow-up, not a bug.
-8. **Sample badge and sample note read the old label.** `SampleBadge` (`components/Common.jsx`) and the Pipeline page's sample note check `meta.data.sources.sample`. After A2b, synthetic rows are labelled `synthetic`, so both are hidden even while the data is synthetic. Switch the frontend to `sources.synthetic`.
+2. **Client cache can lag a pipeline run for up to 60 seconds.** `api.js` keeps promises for the lifetime of the page. The Pipeline page calls `clearCache()` and `bumpData()` after its own runs. Runs from the scheduler or another tab are picked up by the `/meta` `data_version` poll (every 60 seconds while the tab is visible), which then bumps `dataVersion` and refreshes the views. A tab in the background catches up when it becomes visible again.
+3. **Frontend tests are partial.** `pnpm test` (Vitest, `node` environment, no jsdom) covers `alerts`, `api`, `state`, `profile`, `notifications`, and the Board, Detail, MapPage, Planner, and Common render paths. The Auth, Profile, Notifications, Layout, and Pipeline pages have no tests.
+4. **Pytest emits a Starlette deprecation warning** about `httpx` inside `TestClient`. It is not a failure.
+5. **`pnpm build` warns about a chunk over 500 kB.** It is not a failure.
+6. **Board's scoped styles use hardcoded light-on-dark colors.** This is a follow-up, not a bug.
+7. **Sample badge and sample note read the old label.** `SampleBadge` (`components/Common.jsx`) and the Pipeline page's sample note check `meta.data.sources.sample`. After A2b, synthetic rows are labelled `synthetic`, so both are hidden even while the data is synthetic. Switch the frontend to `sources.synthetic`.
 
 ---
 
@@ -376,8 +387,8 @@ This contract covers `GET /api/v1/meta`. Changes from v1 are additive: existing 
 | `group` | string | none | One of: `Grains`, `Meat & Poultry`, `Fish`, `Vegetables & Fruit`, `Roots & Tubers`, `Seafood`, `Pulses & Nuts`, `Oils & Fats`, `Sugar & Sweeteners`. |
 | `unit` | string | none | `kg`, `piece` (`eggs`, `Eggs (duck)`), or `750 ml` (`Oil (cooking)`). |
 | `icon` | string or null | `null` | Emoji. |
-| `typhoon` | number | `0` | What-If sensitivity. `0` means no scenario effect. |
-| `fuel` | number | `0` | What-If sensitivity. `0` means no scenario effect. |
+| `typhoon` | number | `0` | Typhoon sensitivity. `0` means no effect. The What-If page that used it has been removed. |
+| `fuel` | number | `0` | Fuel sensitivity. `0` means no effect. The What-If page that used it has been removed. |
 | `shelf` | number | `0` | Shelf life used for stockability. `0` means unknown. |
 | `basket` | number | `0` | Weight in the palengke basket. `0` excludes the commodity from the basket. |
 | `category` | string | none | WFP category, verbatim (for example `vegetables and fruits`). |

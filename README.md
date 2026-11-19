@@ -39,11 +39,14 @@ Food price instability caused by seasonal weather patterns, transportation costs
 
 ## Key Features
 
-- **Supabase Authentication:** Email/password sign-up and sign-in, with username lookup.
+- **Supabase Authentication:** Email/password sign-up and sign-in, with username lookup, plus Google sign-in.
 - **Price Board:** One price tag per commodity with today's price, a sparkline, the forecast, and a Surge / Dip / Steady flag.
-- **Commodity Detail:** Interactive Chart.js forecast with an 80% range, best day to buy, drivers, and seasonality.
+- **Commodity Detail:** Interactive Chart.js forecast with an 80% range, best day to buy, drivers, seasonality, and an inline model-accuracy panel.
 - **Price Map:** A dot-matrix map of the Philippines colored by expected price change.
 - **Carinderia Planner:** Menu costing, margin at risk, and a weekly shopping list.
+- **Data Pipeline:** Source status, "Run pipeline now", "Simulate a new week", and recent runs.
+- **Profile:** Personal details and an avatar picked from the illustrated set. Saved to your Supabase account and mirrored on this device.
+- **Notifications:** Buying alerts with new, done, and deleted states that persist on this device.
 - **English / Filipino toggle, dark mode, and mobile layout.**
 
 ---
@@ -122,6 +125,7 @@ mercado/
 └── frontend/                  <-- React frontend
     ├── .env.example           <-- Copy to .env for Supabase/API config
     ├── index.html
+    ├── public/avatars/    <-- Avatar illustrations (avatar-1.png … avatar-8.png)
     ├── package.json
     ├── pnpm-lock.yaml
     ├── vite.config.js         <-- React + Tailwind plugins, /api proxy to :8000
@@ -133,11 +137,11 @@ mercado/
         ├── api.js             <-- Axios wrapper with in-memory cache
         ├── supabaseClient.js  <-- Supabase client from env vars
         ├── i18n.js            <-- English / Filipino strings
-        ├── alerts.js, util.js
+        ├── alerts.js, util.js, profile.js, notifications.js, avatars.js
         ├── index.css          <-- Tailwind entry point
         ├── styles.css         <-- Legacy Mercado design system (CSS variables, components)
-        ├── pages/             <-- Auth, Board, Detail, MapPage, Planner
-        └── components/        <-- Layout, Charts (Chart.js + SVG sparkline), PhilippinesMap, PriceTag, Common, Icons, LocationPicker
+        ├── pages/             <-- Auth, Board, Detail, MapPage, Planner, Pipeline, Profile, Notifications
+        └── components/        <-- Layout, Charts (Chart.js + SVG sparkline), PhilippinesMap, PriceTag, Common, Icons, LocationPicker, NotificationsBell, Avatar, AvatarPicker
 ```
 
 ---
@@ -213,6 +217,7 @@ Frontend checks:
 ```bash
 cd frontend
 pnpm lint
+pnpm test
 pnpm build
 ```
 
@@ -235,6 +240,8 @@ pnpm build
 | `VITE_SUPABASE_URL` | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
 | `VITE_DEV_BYPASS_AUTH` | Set to `1` to skip the login gate for UI work without Supabase credentials. Never enable in production. |
+
+Google sign-in is a Supabase OAuth provider. In the Supabase dashboard, enable the Google provider with your Google OAuth client ID and secret, and add the app origin (for example `http://localhost:5173`) to the allowed redirect URLs. The app redirects to `window.location.origin` after sign-in.
 
 ---
 
