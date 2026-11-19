@@ -6,9 +6,8 @@ import Board from './pages/Board'
 import Detail from './pages/Detail'
 import MapPage from './pages/MapPage'
 import Planner from './pages/Planner'
-import WhatIf from './pages/WhatIf'
-import ModelLab from './pages/ModelLab'
-import Pipeline from './pages/Pipeline'
+import Profile from './pages/Profile'
+import Notifications from './pages/Notifications'
 import Auth from './pages/Auth'
 import Layout from './components/Layout'
 
@@ -74,9 +73,8 @@ function AppRouter() {
     if (route.page === 'commodity') page = <Detail key={route.arg} id={route.arg} />
     else if (route.page === 'map') page = <MapPage />
     else if (route.page === 'planner') page = <Planner />
-    else if (route.page === 'whatif') page = <WhatIf />
-    else if (route.page === 'lab') page = <ModelLab />
-    else if (route.page === 'pipeline') page = <Pipeline />
+    else if (route.page === 'profile') page = <Profile />
+    else if (route.page === 'notifications') page = <Notifications key={route.arg || 'all'} />
     else page = <Board />
   }
 

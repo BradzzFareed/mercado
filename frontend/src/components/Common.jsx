@@ -75,5 +75,5 @@ export function SampleBadge() {
   const { meta, t } = useApp()
   const src = meta && meta.data.sources
   if (!src || !src.sample) return null
-  return <span className="badge" title={t('pipe.sample.note')}>{t('common.sample')}</span>
+  return <span className="badge" title={t('common.sample.note')}>{t('common.sample')}</span>
 }
