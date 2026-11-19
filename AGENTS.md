@@ -52,8 +52,10 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
 - Routing is a hand-rolled hash router in `src/state.jsx` (`#/board`,
   `#/commodity/<id>`, `#/map`, `#/profile`, ...). `App.jsx` adds a Supabase session
   guard. The profile page (`pages/Profile.jsx`) edits a local draft stored by
-  `src/profile.js` (localStorage key `mercado.profile`); `updateProfile` commits it
-  and the drawer card in `Layout.jsx` reads the same saved values.
+  `src/profile.js` (localStorage key `mercado.profile.<userId>`); `updateProfile`
+  commits it per user, and `state.jsx` hydrates it from Supabase `user_metadata`
+  on every sign-in. Sign-up seeds the full profile into `user_metadata` via
+  `profileMetadata()`, and the drawer card in `Layout.jsx` reads the same values.
 
 ## Integration
 

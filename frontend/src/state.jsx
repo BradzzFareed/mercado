@@ -1,10 +1,11 @@
 /* eslint-disable react-refresh/only-export-components -- this module exports the app context and data hooks */
 /* eslint-disable react-hooks/set-state-in-effect -- the fetch hooks intentionally reset state when the path changes */
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { get } from './api'
 import { translate } from './i18n'
 import { store, save } from './util'
-import { loadProfile, persistProfile } from './profile'
+import { DEFAULT_PROFILE, loadProfile, mergeProfile, persistProfile, profileFromUser } from './profile'
+import { supabase } from './supabaseClient'
 
 const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
@@ -25,6 +26,33 @@ export function AppProvider({ children }) {
   const [lang, setLang] = useState(store('mercado.lang', 'en'))
   const [theme, setTheme] = useState(store('mercado.theme', null))
   const [profile, setProfile] = useState(loadProfile)
+  const profileUserId = useRef('')
+
+  // Load the signed-in user's profile: Supabase metadata is the source of truth,
+  // the per-user localStorage copy fills any fields metadata does not have yet.
+  const applyUser = useCallback((user) => {
+    profileUserId.current = user?.id || ''
+    if (!user) {
+      setProfile({ ...DEFAULT_PROFILE })
+      return
+    }
+    const local = loadProfile(user.id)
+    const merged = mergeProfile(local, profileFromUser(user))
+    setProfile(merged)
+    persistProfile(merged, user.id)
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) return
+    let alive = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (alive) applyUser(data.session?.user ?? null)
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (alive) applyUser(session?.user ?? null)
+    })
+    return () => { alive = false; sub.subscription.unsubscribe() }
+  }, [applyUser])
 
   useEffect(() => {
     const on = () => setRoute(parseHash())
@@ -52,7 +80,7 @@ export function AppProvider({ children }) {
   const updateProfile = useCallback((next) => {
     setProfile((prev) => {
       const merged = { ...prev, ...next }
-      return persistProfile(merged)
+      return persistProfile(merged, profileUserId.current)
     })
   }, [])
 

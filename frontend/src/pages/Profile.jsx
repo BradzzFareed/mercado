@@ -1,10 +1,10 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { CalendarDays, Lock, RefreshCw } from 'lucide-react'
 import { useApp } from '../state'
 import Avatar from '../components/Avatar'
 import AvatarPicker from '../components/AvatarPicker'
 import {
-  ROLE, fullName, sanitizeAddress, sanitizeAge, sanitizeName, titleCaseRegion, validateProfile,
+  ROLE, profileMetadata, sanitizeAddress, sanitizeAge, sanitizeName, titleCaseRegion, validateProfile,
 } from '../profile'
 import { supabase } from '../supabaseClient'
 
@@ -25,6 +25,7 @@ export default function Profile() {
 
   const initial = {
     ...profile,
+    gender: profile.gender === 'N/A' ? 'Prefer not to say' : profile.gender,
     provinceId: profile.provinceId || prov?.id || '',
     provinceName: profile.provinceName || prov?.name || '',
     regionName: profile.regionName || titleCaseRegion(prov?.region || ''),
@@ -38,6 +39,16 @@ export default function Profile() {
   const [editingAbout, setEditingAbout] = useState(false)
   const aboutRef = useRef(null)
   const birthdayRef = useRef(null)
+
+  // The profile loads asynchronously after login/session refresh. Keep the form
+  // in sync when it arrives, and refresh it again after a successful save.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- form state mirrors the async profile
+    setDraft(initial)
+    setErrors({})
+    setRejected({})
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when the saved profile changes; prov is read fresh from the render
+  }, [profile])
 
   const setField = (key, value) => {
     setDraft((d) => ({ ...d, [key]: value }))
@@ -109,18 +120,9 @@ export default function Profile() {
     updateProfile(next)
     if (supabase) {
       try {
-        await supabase.auth.updateUser({
-          data: {
-            full_name: fullName(next),
-            role: ROLE,
-            avatar: next.avatar,
-            about: next.about,
-            age: next.age,
-            gender: next.gender,
-            birthday: next.birthday,
-            address: [next.address, next.provinceName, next.regionName].filter(Boolean).join(', '),
-          },
-        })
+        // Persist every profile field to user_metadata so the next sign-in (on
+        // any device) restores the full profile, not just the display name.
+        await supabase.auth.updateUser({ data: profileMetadata(next) })
       } catch { /* offline or no session: localStorage copy already saved */ }
     }
     setStatus('saved')
@@ -221,7 +223,7 @@ export default function Profile() {
             >
               <option>Male</option>
               <option>Female</option>
-              <option>N/A</option>
+              <option>Prefer not to say</option>
             </select>
           </div>
           <div className="pf-inline">

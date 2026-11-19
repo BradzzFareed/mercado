@@ -7,6 +7,7 @@ import Detail from './pages/Detail'
 import MapPage from './pages/MapPage'
 import Planner from './pages/Planner'
 import Profile from './pages/Profile'
+import Notifications from './pages/Notifications'
 import Auth from './pages/Auth'
 import Layout from './components/Layout'
 
@@ -55,6 +56,7 @@ function AppRouter() {
     else if (route.page === 'map') page = <MapPage />
     else if (route.page === 'planner') page = <Planner />
     else if (route.page === 'profile') page = <Profile />
+    else if (route.page === 'notifications') page = <Notifications key={route.arg || 'all'} />
     else page = <Board />
   }
 

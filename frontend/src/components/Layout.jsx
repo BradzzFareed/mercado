@@ -6,6 +6,7 @@ import Avatar from './Avatar'
 import { ROLE, addressLine, displayName, titleCaseRegion } from '../profile'
 import { LogOut, Bell, Menu, X, Globe, MapPin, LayoutGrid, BookOpen, ClipboardList } from 'lucide-react'
 import { buildAlerts } from '../alerts'
+import NotificationsBell from './NotificationsBell'
 import { supabase } from '../supabaseClient'
 
 // Drawer menu: Profile is reached through the profile card at the top, not a menu row.
@@ -18,7 +19,6 @@ export default function Layout({ children }) {
   const { nav, route, t, lang, setLang, theme, setTheme, province, prov, horizon, commodityBy, profile } = useApp()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLocOpen, setIsLocOpen] = useState(false)
-  const [jumpToAlerts, setJumpToAlerts] = useState(false)
   const mainRef = useRef(null)
   const locRef = useRef(null)
   const drawerRef = useRef(null)
@@ -26,18 +26,22 @@ export default function Layout({ children }) {
   const wasOpen = useRef(false)
   const navRefs = useRef({})
   const [pill, setPill] = useState(null)
-  // TODO(backend): replace this placeholder once a profile endpoint/table exists (see integration notes).
   const [user, setUser] = useState(null)
 
   useEffect(() => {
     if (!supabase) return
     let alive = true
+
+    // The profile itself is hydrated from user_metadata in state.jsx; this only
+    // tracks the signed-in user for the drawer's fallback values.
     supabase.auth.getSession().then(({ data }) => {
       if (alive) setUser(data.session?.user ?? null)
     })
+
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       if (alive) setUser(s?.user ?? null)
     })
+
     return () => { alive = false; sub.subscription.unsubscribe() }
   }, [])
 
@@ -54,49 +58,34 @@ export default function Layout({ children }) {
   // Sliding active pill behind the drawer nav items.
   const measurePill = useCallback(() => {
     const el = navRefs.current[active]
-    // No menu row for the current page (e.g. Profile): hide the pill instead of leaving it stale.
     setPill(el ? { top: el.offsetTop, height: el.offsetHeight } : null)
   }, [active])
   useEffect(() => {
     measurePill()
-    // Re-measure after the drawer finishes sliding in / on resize.
     if (!isMenuOpen) return
     const t = setTimeout(measurePill, 350)
     window.addEventListener('resize', measurePill)
     return () => { clearTimeout(t); window.removeEventListener('resize', measurePill) }
   }, [measurePill, isMenuOpen, lang])
 
-  // Drawer profile card. Names/address come from the saved profile (see profile.js);
-  // the Supabase auth user is only a fallback before the first save.
-  const fallbackName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Guest'
+  // Drawer profile card: resolves saved profile first, falling back to Supabase user_metadata.
+  const meta = user?.user_metadata || {}
+  const fallbackName = meta.full_name || meta.username || user?.email?.split('@')[0] || 'Guest'
   const fallbackShort = fallbackName.trim().split(/\s+/).filter(Boolean)
-  const profileName = displayName(profile) || (fallbackShort.length > 1 ? `${fallbackShort[0]} ${fallbackShort[fallbackShort.length - 1]}` : fallbackName)
+  const profileName =
+    displayName(profile) ||
+    (fallbackShort.length > 1 ? `${fallbackShort[0]} ${fallbackShort[fallbackShort.length - 1]}` : fallbackName)
+
   const profileLocation = addressLine(profile) || (prov ? `${prov.name}, ${titleCaseRegion(prov.region)}` : '—')
   const profileRole = ROLE
 
+  // Resolve avatar: supports both image paths ('/avatars/...' or 'http...') and built-in SVG avatar IDs
+  const resolvedAvatar = profile?.avatar || meta.avatar_url
+  const isImageAvatar = typeof resolvedAvatar === 'string' && (resolvedAvatar.startsWith('/') || resolvedAvatar.startsWith('http'))
+
   const closeMenu = () => setIsMenuOpen(false)
   const goBoard = () => { closeMenu(); nav('board') }
-  const goAlerts = () => { closeMenu(); setJumpToAlerts(true); nav('board') }
-
-  // Jump to the Board alerts panel without putting "#alerts" in the hash route.
-  useEffect(() => {
-    if (!jumpToAlerts || route.page !== 'board') return
-    let frame = 0
-    let raf
-    const focus = () => {
-      const el = document.getElementById('board-alerts')
-      if (!el) {
-        if (frame++ < 12) raf = requestAnimationFrame(focus)
-        return
-      }
-      setJumpToAlerts(false)
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      el.scrollIntoView({ block: 'start', behavior: reduce ? 'auto' : 'smooth' })
-      el.focus({ preventScroll: true })
-    }
-    raf = requestAnimationFrame(focus)
-    return () => cancelAnimationFrame(raf)
-  }, [jumpToAlerts, route.page, overview])
+  const goAlerts = () => { closeMenu(); nav('notifications') }
 
   // Escape closes the location popover; clicking outside closes it too.
   useEffect(() => {
@@ -158,8 +147,6 @@ export default function Layout({ children }) {
   const textMuted = dark ? '#94a3b8' : '#047857';
   const borderSubtle = dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(16, 185, 129, 0.2)';
   const hoverBg = dark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(16, 185, 129, 0.1)';
-
-  // New: Dynamic Grid Line Colors
   const gridColor = dark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(16, 185, 129, 0.06)';
 
   return (
@@ -168,7 +155,6 @@ export default function Layout({ children }) {
         .app-global-wrapper {
           min-height: 100vh; 
           background-color: ${bgApp};
-          /* Modern Tailwind-style Grid Background */
           background-image: 
             linear-gradient(to right, ${gridColor} 1px, transparent 1px),
             linear-gradient(to bottom, ${gridColor} 1px, transparent 1px);
@@ -179,7 +165,6 @@ export default function Layout({ children }) {
           transition: background-color 0.3s ease, color 0.3s ease;
         }
         
-        /* The glowing emerald radial effect floating over the grid */
         .app-global-wrapper::before {
           content: ''; position: absolute; top: -10%; left: -5%; width: 40vw; height: 40vw;
           background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(6, 14, 10, 0) 70%);
@@ -232,8 +217,10 @@ export default function Layout({ children }) {
           color: ${dark ? '#a5f3fc' : '#1d4ed8'};
           display: flex; align-items: center; justify-content: center;
           font-weight: 700; font-size: 1.25rem; overflow: hidden;
+          border: 2px solid #10b981;
         }
-        .profile-avatar .avatar-svg { width: 100%; height: 100%; display: block; }
+        .profile-avatar .avatar-svg,
+        .profile-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .profile-name { font-weight: 800; font-size: 1.05rem; color: ${textMain}; text-align: center; overflow-wrap: anywhere; }
         .profile-meta { font-size: 0.8rem; color: ${textMuted}; text-align: center; }
 
@@ -261,7 +248,6 @@ export default function Layout({ children }) {
           animation: loc-pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
         }
         @keyframes loc-pop-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
-        
 
         .page-content-wrapper { padding: 2.5rem 3rem; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; position: relative; z-index: 1; }
 
@@ -293,7 +279,11 @@ export default function Layout({ children }) {
           aria-label={`Open profile for ${profileName}`}
         >
           <span className="profile-avatar">
-            <Avatar id={profile.avatar} />
+            {isImageAvatar ? (
+              <img src={resolvedAvatar} alt={profileName} className="profile-avatar-img" />
+            ) : (
+              <Avatar id={resolvedAvatar} />
+            )}
           </span>
           <span className="profile-name" style={{ fontSize: profileName.length > 26 ? '0.95rem' : profileName.length > 20 ? '1.02rem' : '1.08rem' }}>
             {profileName}
@@ -360,15 +350,7 @@ export default function Layout({ children }) {
               </div>
             )}
           </div>
-          <button
-            className="icon-btn"
-            onClick={goAlerts}
-            aria-label={alerts.length ? t('alerts.bell', { count: alerts.length }) : t('alerts.title')}
-            title={alerts.length ? t('alerts.bell', { count: alerts.length }) : t('alerts.title')}
-          >
-            <Bell size={18} />
-            {alerts.length > 0 && <span className="alert-badge" aria-hidden="true">{alerts.length}</span>}
-          </button>
+          <NotificationsBell alerts={alerts} commodityBy={commodityBy} />
           <button className="icon-btn" onClick={() => setTheme(dark ? 'light' : 'dark')} aria-label={t('theme')}>
             {dark ? <IconSun size={18} /> : <IconMoon size={18} />}
           </button>
@@ -381,22 +363,3 @@ export default function Layout({ children }) {
     </div>
   )
 }
-
-/*
- * PROFILE DATA — where it lives now:
- *
- * `src/profile.js` owns the saved shape (name parts, age, gender, birthday,
- * address/province/region, email, about, avatar) and persists it to
- * localStorage under `mercado.profile`. `AppProvider` exposes `profile` and
- * `updateProfile(patch)`; `pages/Profile.jsx` edits a draft and only commits on
- * Save, so this drawer card always reflects saved values:
- *   - name      -> first + last only (no middle name)
- *   - location  -> "Province, Region" from meta.regions/provinces
- *   - role      -> always "Customer"
- *   - avatar    -> inline SVG from `src/avatars.js`
- *
- * To sync across devices, replace loadProfile()/persistProfile() in profile.js
- * with a backend call (GET/PUT /api/v1/profile) or read/write Supabase user
- * metadata; Profile.jsx already mirrors saves into supabase.auth.updateUser().
- */
-
