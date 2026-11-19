@@ -16,10 +16,10 @@ export default function Board() {
   if (loading || !data) return <Training />
 
   const key = String(horizon)
-  const surges = data.items.filter((i) => i.horizons[key].signal === 'surge')
-  const dips = data.items.filter((i) => i.horizons[key].signal === 'dip')
+  const surges = data.items.filter((i) => i.horizons[key]?.signal === 'surge')
+  const dips = data.items.filter((i) => i.horizons[key]?.signal === 'dip')
   const bk = data.basket
-  const bch = bk[key].change_pct
+  const bch = bk[key]?.change_pct
   const bsig = bch >= 2.5 ? 'surge' : bch <= -2.5 ? 'dip' : 'stable'
   const names = (arr) => arr.map((i) => commodityBy[i.commodity].short).join(', ')
 
@@ -64,7 +64,7 @@ export default function Board() {
           <div className="kpi-label">{t('board.basket')}</div>
           <div className="kpi-big">{peso0(bk.current)}</div>
           <div className="kpi-row">
-            <SignalChip signal={bsig}>{pct(bch)} → {peso0(bk[key].price)}</SignalChip>
+            {bk[key] ? <SignalChip signal={bsig}>{pct(bch)} → {peso0(bk[key].price)}</SignalChip> : <span className="muted">—</span>}
             <span className="muted">{t('board.basket.sub')}</span>
           </div>
           <Sparkline values={bk.spark} forecast={bk.spark_forecast} width={260} height={46} />

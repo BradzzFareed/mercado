@@ -21,6 +21,7 @@ export default function WhatIf() {
     return data.items.map((it) => {
       const c = commodityBy[it.commodity]
       const base = it.horizons[String(horizon)]
+      if (!base) return { c, it, base: null, price: null, change: null, extra: null, signal: null }
       const extra = scenarioPct(c, horizon, typhoon, fuel)
       const price = base.price * (1 + extra / 100)
       const change = (price / it.price - 1) * 100
@@ -30,12 +31,14 @@ export default function WhatIf() {
   if (error) return <ErrorBox error={error} retry={reload} />
   if (loading || !data) return <Training />
 
+  const complete = rows.every((r) => r.base)
   const w = (id) => commodityBy[id].basket
-  const baseBasket = rows.reduce((s, r) => s + w(r.c.id) * r.base.price, 0)
-  const scenBasket = rows.reduce((s, r) => s + w(r.c.id) * r.price, 0)
-  const delta = scenBasket - baseBasket
+  const baseBasket = complete ? rows.reduce((s, r) => s + w(r.c.id) * r.base.price, 0) : null
+  const scenBasket = complete ? rows.reduce((s, r) => s + w(r.c.id) * r.price, 0) : null
+  const delta = complete ? scenBasket - baseBasket : null
   const level = typhoon === 0 ? 0 : typhoon <= 0.34 ? 1 : typhoon <= 0.67 ? 2 : 3
-  const max = Math.max(...rows.map((r) => Math.abs(r.change)), 10)
+  const max = Math.max(...rows.map((r) => Math.abs(r.change ?? 0)), 10)
+  const ranked = [...rows].sort((a, b) => (a.change == null) - (b.change == null) || b.change - a.change)
 
   return (
     <div className={'whatif' + (typhoon > 0.05 ? ' storm' : '')} style={{ '--storm': typhoon }}>
@@ -56,23 +59,23 @@ export default function WhatIf() {
           <button className="btn ghost" onClick={() => { setTyphoon(0); setFuel(0) }}>{t('wi.reset')}</button>
           <div className="wi-basket">
             <span>{t('wi.basket')}</span>
-            <b>{peso0(scenBasket)}</b>
-            <SignalChip signal={classify((delta / baseBasket) * 100 * 2)}>{delta >= 0 ? '+' : '−'}{peso0(Math.abs(delta))} {t('wi.vs')}</SignalChip>
+            <b>{complete ? peso0(scenBasket) : '—'}</b>
+            {complete && <SignalChip signal={classify((delta / baseBasket) * 100 * 2)}>{delta >= 0 ? '+' : '−'}{peso0(Math.abs(delta))} {t('wi.vs')}</SignalChip>}
           </div>
           <p className="muted small">{t('wi.note')}</p>
         </section>
         <section className="panel">
           <h2>{horizon}-day prices under this scenario</h2>
           <ul className="wi-list">
-            {[...rows].sort((a, b) => b.change - a.change).map((r) => (
+            {ranked.map((r) => (
               <li key={r.c.id}>
                 <span className="wi-name"><span aria-hidden="true">{r.c.icon}</span> {r.c.short}</span>
-                <span className="wi-bar" role="img" aria-label={`${r.c.short} ${pct(r.change)}`}>
+                <span className="wi-bar" role="img" aria-label={`${r.c.short} ${r.change == null ? '—' : pct(r.change)}`}>
                   <i className="mid" />
-                  <i className={'fill ' + (r.change >= 0 ? 'up' : 'down')} style={{ width: Math.abs(r.change) / max * 50 + '%', left: r.change >= 0 ? '50%' : 50 - Math.abs(r.change) / max * 50 + '%' }} />
+                  {r.change != null && <i className={'fill ' + (r.change >= 0 ? 'up' : 'down')} style={{ width: Math.abs(r.change) / max * 50 + '%', left: r.change >= 0 ? '50%' : 50 - Math.abs(r.change) / max * 50 + '%' }} />}
                 </span>
-                <span className="wi-price">{peso(r.price)}</span>
-                <SignalChip signal={r.signal}>{pct(r.change)}</SignalChip>
+                <span className="wi-price">{r.price == null ? '—' : peso(r.price)}</span>
+                {r.signal ? <SignalChip signal={r.signal}>{pct(r.change)}</SignalChip> : <span className="muted">—</span>}
               </li>
             ))}
           </ul>

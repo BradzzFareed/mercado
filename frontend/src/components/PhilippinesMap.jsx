@@ -38,6 +38,7 @@ const PIN_FLAT = '#f59e0b'  // Neutral / flat change (Amber Yellow)
 
 // Map percentage change directly to explicit hex colors
 function getPinColor(ch) {
+  if (ch == null) return PIN_FLAT
   if (ch > 0.001) return PIN_RISE
   if (ch < -0.001) return PIN_FALL
   return PIN_FLAT
@@ -70,7 +71,8 @@ export default function PhilippinesMap({ rows, horizon, selected, onSelect }) {
         ))}
 
         {rows.map((r) => {
-          const ch = r.horizons[String(horizon)].change_pct
+          const ch = r.horizons[String(horizon)]?.change_pct
+          const chText = ch == null ? '—' : pct(ch)
           const on = r.province === selected
           const cx = px(r.lon)
           const cy = py(r.lat)
@@ -87,7 +89,7 @@ export default function PhilippinesMap({ rows, horizon, selected, onSelect }) {
               onClick={() => onSelect(r.province)}
               tabIndex={0}
               role="button"
-              aria-label={`${r.name}: ${peso(r.price)}, ${pct(ch)}`}
+              aria-label={`${r.name}: ${peso(r.price)}, ${chText}`}
               onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.province)}
             >
               <circle cx={cx} cy={cy - 12} r="14" fill="transparent" />
@@ -122,7 +124,7 @@ export default function PhilippinesMap({ rows, horizon, selected, onSelect }) {
           <div className="map-card-row">
             <strong>{peso(cur.price)}</strong>
             <em style={{ color: 'var(--ink-2)' }}>
-              {pct(cur.horizons[String(horizon)].change_pct)} in {horizon}d
+              {cur.horizons[String(horizon)] ? <>{pct(cur.horizons[String(horizon)].change_pct)} in {horizon}d</> : '—'}
             </em>
           </div>
         </div>
