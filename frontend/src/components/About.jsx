@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { motion, MotionConfig } from 'framer-motion'
+import { Copy, Check } from 'lucide-react'
 import { PageHead } from './Common'
 import { useApp } from '../state'
 
@@ -16,30 +17,33 @@ const TEAM_MEMBERS = [
     name: 'Leo Angello P. Visto',
     role: 'Full Stack',
     description: 'Quality Assurance and Project Manager',
-    image: '/Pictures/Visto.png'
+    image: '/Pictures/Visto.png',
+    email: 'gellovisto@gmail.com',
   },
   {
     name: 'James Bradley G. Caligayahan',
     role: 'Full Stack',
     description: 'Backend Lead and Github Manager.',
-    image: '/Pictures/Caligayahan.jpg', // Replace with '/images/member2.jpg' after uploading
+    image: '/Pictures/Caligayahan.jpg',
+    email: 'bradleycaligs005@gmail.com'
   },
   {
     name: 'Ralfh Justine N. Lindog',
     role: 'Full  Stack',
     description: 'Frontend and Design Lead',
-    image: '/Pictures/Lindog.jpg', // Replace with '/images/member3.jpg' after uploading
+    image: '/Pictures/Lindog.jpg',
+    email: 'lindogralfhjustine@gmail.com',
   },
 ]
 
-// 3 cursors take turns (round-robin) dragging the 7 non-team elements into place
+// 3 cursors take turns (round-robin) dragging the 6 non-team elements into place
 const CURSORS = [
-  { name: 'Builder 1', color: '#10b981', idle: { x: 40, y: 16 } },
-  { name: 'Builder 2', color: '#0ea5e9', idle: { x: 160, y: 16 } },
-  { name: 'Builder 3', color: '#8b5cf6', idle: { x: 280, y: 16 } },
+  { name: 'Ralfh', color: '#10b981', idle: { x: 40, y: 16 } },
+  { name: 'James', color: '#0ea5e9', idle: { x: 160, y: 16 } },
+  { name: 'Leo', color: '#8b5cf6', idle: { x: 280, y: 16 } },
 ]
 
-// Off-screen drag origins for each of the 7 items: [Hero, Tech0..Tech4, ContactBtn]
+// Off-screen drag origins for each of the 6 items: [Hero, Tech0..Tech4]
 const ITEM_ORIGINS = [
   { x: 180, y: -90 },  // 0: Hero Card
   { x: -120, y: -80 }, // 1: React
@@ -47,7 +51,6 @@ const ITEM_ORIGINS = [
   { x: 0, y: -105 },   // 3: Tailwind CSS
   { x: 70, y: -95 },   // 4: Python & FastAPI
   { x: 130, y: -80 },  // 5: Supabase
-  { x: 0, y: 80 },     // 6: Contact Us button
 ]
 
 const FETCH_DURATION = 0.35
@@ -55,17 +58,40 @@ const DRAG_DURATION = 0.72
 const GAP_BETWEEN_ITEMS = 0.12
 const STEP_INTERVAL = FETCH_DURATION + DRAG_DURATION + GAP_BETWEEN_ITEMS
 
-export default function About({ onContactClick }) {
+export default function About() {
   const { t } = useApp()
   const wrapperRef = useRef(null)
   const itemRefs = useRef([])
   const [targets, setTargets] = useState([])
+  const [copiedEmail, setCopiedEmail] = useState(null)
 
   const aboutTitle = t('about.title') !== 'about.title' ? t('about.title') : 'About Mercado'
   const aboutSub =
     t('about.sub') !== 'about.sub'
       ? t('about.sub')
       : 'Built by Trinity Build to help consumers track local prices and compare nearby markets'
+
+  const handleCopyEmail = async (email) => {
+    try {
+      await navigator.clipboard.writeText(email)
+      setCopiedEmail(email)
+      setTimeout(() => {
+        setCopiedEmail((prev) => (prev === email ? null : prev))
+      }, 2000)
+    } catch {
+      // Fallback for restricted clipboard contexts
+      const textarea = document.createElement('textarea')
+      textarea.value = email
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setCopiedEmail(email)
+      setTimeout(() => {
+        setCopiedEmail((prev) => (prev === email ? null : prev))
+      }, 2000)
+    }
+  }
 
   // Measure each draggable element's exact resting position inside the wrapper
   useLayoutEffect(() => {
@@ -111,7 +137,6 @@ export default function About({ onContactClick }) {
         keyframes.push({ t: fetchStart, x: prev.x, y: prev.y, opacity: 0 })
       }
 
-      // 1. Appear at the element's starting offset
       keyframes.push({
         t: grabTime,
         x: target.x + origin.x,
@@ -119,7 +144,6 @@ export default function About({ onContactClick }) {
         opacity: 1,
       })
 
-      // 2. Drag the element all the way to its final drop spot
       keyframes.push({
         t: dropTime,
         x: target.x,
@@ -127,7 +151,6 @@ export default function About({ onContactClick }) {
         opacity: 1,
       })
 
-      // 3. Release and fade out once the element is placed
       keyframes.push({
         t: fadeOutTime,
         x: target.x + 18,
@@ -155,6 +178,7 @@ export default function About({ onContactClick }) {
         <style>{`
           .about-page-wrapper {
             position: relative;
+            padding-bottom: 2rem;
           }
 
           .about-stage {
@@ -328,6 +352,35 @@ export default function About({ onContactClick }) {
             font-size: 0.88rem;
             color: var(--ink-3);
             line-height: 1.5;
+            flex-grow: 1;
+          }
+
+          .about-copy-email-btn {
+            margin-top: 1.15rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            font-family: inherit;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+          }
+          .about-copy-email-btn:hover {
+            background: #10b981;
+            color: #022c22;
+            border-color: #10b981;
+            transform: translateY(-1px);
+          }
+          .about-copy-email-btn.copied {
+            background: #10b981;
+            color: #022c22;
+            border-color: #10b981;
           }
 
           .about-cursor {
@@ -355,34 +408,6 @@ export default function About({ onContactClick }) {
             letter-spacing: 0.02em;
             white-space: nowrap;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-          }
-
-          .about-cta-wrap {
-            margin-top: 2.5rem;
-            display: flex;
-            justify-content: center;
-          }
-          .about-contact-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.8rem 1.75rem;
-            border-radius: 999px;
-            border: none;
-            background: #10b981;
-            color: #022c22;
-            font-family: inherit;
-            font-size: 0.95rem;
-            font-weight: 700;
-            text-decoration: none;
-            cursor: pointer;
-            box-shadow: 0 10px 24px rgba(16, 185, 129, 0.25);
-            transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-          }
-          .about-contact-btn:hover {
-            background: #34d399;
-            transform: translateY(-2px);
-            box-shadow: 0 14px 28px rgba(16, 185, 129, 0.35);
           }
         `}</style>
 
@@ -509,58 +534,45 @@ export default function About({ onContactClick }) {
           </div>
 
           <div className="about-team-grid">
-            {TEAM_MEMBERS.map((member, idx) => (
-              <div key={member.name} className="about-member-card">
-                <motion.div
-                  initial={{ opacity: 0, y: 40 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.9,
-                    delay: teamDelay + 0.12 + idx * 0.14,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                  className="about-photo-slot"
-                >
-                  {member.image ? (
-                    <img src={member.image} alt={member.name} />
-                  ) : (
-                    <span className="about-photo-placeholder">Photo Slot</span>
-                  )}
-                </motion.div>
+            {TEAM_MEMBERS.map((member, idx) => {
+              const isCopied = copiedEmail === member.email
+              return (
+                <div key={member.name} className="about-member-card">
+                  <motion.div
+                    initial={{ opacity: 0, y: 40 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.9,
+                      delay: teamDelay + 0.12 + idx * 0.14,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                    className="about-photo-slot"
+                  >
+                    {member.image ? (
+                      <img src={member.image} alt={member.name} />
+                    ) : (
+                      <span className="about-photo-placeholder">Photo Slot</span>
+                    )}
+                  </motion.div>
 
-                <h3 className="about-member-name">{member.name}</h3>
-                <div className="about-member-role">{member.role}</div>
-                <p className="about-member-desc">{member.description}</p>
-              </div>
-            ))}
+                  <h3 className="about-member-name">{member.name}</h3>
+                  <div className="about-member-role">{member.role}</div>
+                  <p className="about-member-desc">{member.description}</p>
+
+                  <button
+                    type="button"
+                    className={`about-copy-email-btn ${isCopied ? 'copied' : ''}`}
+                    onClick={() => handleCopyEmail(member.email)}
+                    aria-label={`Copy email address for ${member.name}`}
+                  >
+                    {isCopied ? <Check size={15} /> : <Copy size={15} />}
+                    <span>{isCopied ? 'Copied!' : 'Copy Email'}</span>
+                  </button>
+                </div>
+              )
+            })}
           </div>
         </motion.div>
-
-        {/* Item 6: Contact Us CTA (dragged into place by Builder 1) */}
-        <div className="about-cta-wrap">
-          <motion.a
-            ref={(el) => {
-              itemRefs.current[6] = el
-            }}
-            initial={{ opacity: 0, x: ITEM_ORIGINS[6].x, y: ITEM_ORIGINS[6].y }}
-            animate={{ opacity: 1, x: 0, y: 0 }}
-            transition={{
-              duration: DRAG_DURATION,
-              delay: 0.25 + 6 * STEP_INTERVAL,
-              ease: 'easeInOut',
-            }}
-            href="mailto:trinitybuild@example.com"
-            onClick={(e) => {
-              if (onContactClick) {
-                e.preventDefault()
-                onContactClick()
-              }
-            }}
-            className="about-contact-btn"
-          >
-            Contact Us
-          </motion.a>
-        </div>
       </div>
     </MotionConfig>
   )
