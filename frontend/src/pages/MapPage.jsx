@@ -6,7 +6,7 @@ import { changeColor } from '../util'
 import { peso, pct } from '../util'
 
 export default function MapPage() {
-  const { meta, province, setProvince, horizon, t, dataVersion, nav } = useApp()
+  const { meta, province, setProvince, horizon, t, nav, dataVersion } = useApp()
   const [cid, setCid] = useState('rice')
   const { data, error, loading, reload } = useApi(`/api/v1/map?commodity=${cid}`, [dataVersion])
   const c = meta.commodities.find((x) => x.id === cid)

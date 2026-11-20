@@ -39,14 +39,14 @@ Food price instability caused by seasonal weather patterns, transportation costs
 
 ## Key Features
 
-- **Supabase Authentication:** Email/password sign-up and sign-in, with username lookup.
+- **Supabase Authentication:** Email/password sign-up and sign-in, with username lookup, plus Google sign-in.
 - **Price Board:** One price tag per commodity with today's price, a sparkline, the forecast, and a Surge / Dip / Steady flag.
-- **Commodity Detail:** Interactive Chart.js forecast with an 80% range, best day to buy, drivers, seasonality, and a back-test comparison.
+- **Commodity Detail:** Interactive Chart.js forecast with an 80% range, best day to buy, drivers, seasonality, and an inline model-accuracy panel.
 - **Price Map:** A dot-matrix map of the Philippines colored by expected price change.
 - **Carinderia Planner:** Menu costing, margin at risk, and a weekly shopping list.
-- **What-If Lab:** Typhoon and fuel sliders layered on the forecast.
-- **Model Lab:** Ensemble accuracy versus the naive "prices stay put" baseline.
-- **Data Pipeline:** Source status, "Run pipeline now", and "Simulate a new week".
+- **Data Pipeline:** Source status, "Run pipeline now", "Simulate a new week", and recent runs.
+- **Profile:** Personal details and an avatar picked from the illustrated set. Saved to your Supabase account and mirrored on this device.
+- **Notifications:** Buying alerts with new, done, and deleted states that persist on this device.
 - **English / Filipino toggle, dark mode, and mobile layout.**
 
 ---
@@ -93,11 +93,9 @@ Food price instability caused by seasonal weather patterns, transportation costs
 | GET | `/api/v1/health` | Row count and latest data date |
 | GET | `/api/v1/meta` | Provinces, regions, commodities, dishes, horizons, dataset info |
 | GET | `/api/v1/overview?province=` | Price board: per-commodity summaries and basket |
-| GET | `/api/v1/forecast?province=&commodity=` | Full detail: history, forecast, drivers, seasonality, back-test |
+| GET | `/api/v1/forecast?province=&commodity=` | Full detail: history, forecast, drivers, seasonality |
 | GET | `/api/v1/map?commodity=` | All provinces for one commodity |
 | GET | `/api/v1/compare?province=&commodity=` | Nearby cheaper markets |
-| GET | `/api/v1/pipeline` | Dataset, scheduler, sources, recent runs |
-| POST | `/api/v1/pipeline/run` | Body `{"mode": "live|wfp|inbox|da|simulate|seed"}` |
 
 ---
 
@@ -110,17 +108,15 @@ mercado/
 ├── README.md
 │
 ├── backend/                   <-- FastAPI backend
-│   ├── main.py                <-- App, lifespan (seed/warm/scheduler), /api/v1 routes
+│   ├── main.py                <-- App, lifespan (seed/warm), /api/v1 routes
 │   ├── pyproject.toml         <-- Dependencies managed by uv
 │   ├── uv.lock
-│   ├── mercado/               <-- Forecast engine and data pipeline
-│   │   ├── commodities.py     <-- Commodity metadata and shock sensitivities
+│   ├── mercado/               <-- Forecast engine
+│   │   ├── commodities.py     <-- Commodity metadata and display info
 │   │   ├── geo.py             <-- Regions, provinces, market coordinates
 │   │   ├── sample_data.py     <-- Deterministic synthetic history generator
 │   │   ├── models.py          <-- Naive, Holt-Winters, Ridge, gradient-boosted trees
 │   │   ├── forecast.py        <-- Caching, signals, drivers, bulk views
-│   │   ├── pipeline.py        <-- fetch -> clean -> store (live, wfp, inbox, da, simulate, seed)
-│   │   ├── scheduler.py       <-- Background thread that reruns the pipeline
 │   │   └── store.py           <-- SQLite storage and weekly series access
 │   ├── data/                  <-- Generated at runtime (mercado.db is gitignored)
 │   └── tests/
@@ -129,6 +125,7 @@ mercado/
 └── frontend/                  <-- React frontend
     ├── .env.example           <-- Copy to .env for Supabase/API config
     ├── index.html
+    ├── public/avatars/    <-- Avatar illustrations (avatar-1.png … avatar-8.png)
     ├── package.json
     ├── pnpm-lock.yaml
     ├── vite.config.js         <-- React + Tailwind plugins, /api proxy to :8000
@@ -140,11 +137,11 @@ mercado/
         ├── api.js             <-- Axios wrapper with in-memory cache
         ├── supabaseClient.js  <-- Supabase client from env vars
         ├── i18n.js            <-- English / Filipino strings
-        ├── alerts.js, util.js
+        ├── alerts.js, util.js, profile.js, notifications.js, avatars.js
         ├── index.css          <-- Tailwind entry point
         ├── styles.css         <-- Legacy Mercado design system (CSS variables, components)
-        ├── pages/             <-- Auth, Board, Detail, MapPage, Planner, WhatIf, ModelLab, Pipeline
-        └── components/        <-- Layout, Charts (Chart.js + SVG sparkline), PhilippinesMap, PriceTag, Common, Icons, LocationPicker
+        ├── pages/             <-- Auth, Board, Detail, MapPage, Planner, Pipeline, Profile, Notifications
+        └── components/        <-- Layout, Charts (Chart.js + SVG sparkline), PhilippinesMap, PriceTag, Common, Icons, LocationPicker, NotificationsBell, Avatar, AvatarPicker
 ```
 
 ---
@@ -213,13 +210,14 @@ cd backend
 uv run pytest -q
 ```
 
-The suite covers sample-data determinism, ensemble quality versus the naive baseline, the WFP normalizer, the API endpoints, and pipeline modes.
+The suite covers sample-data determinism, ensemble quality versus the naive baseline, and the API endpoints.
 
 Frontend checks:
 
 ```bash
 cd frontend
 pnpm lint
+pnpm test
 pnpm build
 ```
 
@@ -231,10 +229,8 @@ pnpm build
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `MERCADO_DATA_DIR` | `backend/data` | Where SQLite and pipeline state live |
+| `MERCADO_DATA_DIR` | `backend/data` | Where the SQLite database lives |
 | `MERCADO_WARM` | `1` | Set to `0` to skip pre-computing forecasts at startup |
-| `MERCADO_SCHEDULER` | `1` | Set to `0` to disable the daily pipeline refresh |
-| `MERCADO_REFRESH_HOURS` | `24` | Scheduler interval |
 
 ### Frontend (`frontend/.env`)
 
@@ -244,6 +240,8 @@ pnpm build
 | `VITE_SUPABASE_URL` | Supabase project URL |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
 | `VITE_DEV_BYPASS_AUTH` | Set to `1` to skip the login gate for UI work without Supabase credentials. Never enable in production. |
+
+Google sign-in is a Supabase OAuth provider. In the Supabase dashboard, enable the Google provider with your Google OAuth client ID and secret, and add the app origin (for example `http://localhost:5173`) to the allowed redirect URLs. The app redirects to `window.location.origin` after sign-in.
 
 ---
 

@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, useCal
 import { clearCache, get, invalidate } from './api'
 import { translate } from './i18n'
 import { store, save } from './util'
+import { DEFAULT_PROFILE, loadProfile, mergeProfile, persistProfile, profileFromUser } from './profile'
+import { supabase } from './supabaseClient'
 
 const Ctx = createContext(null)
 export const useApp = () => useContext(Ctx)
@@ -27,7 +29,7 @@ export function resolveHorizon(pref, choices) {
   return choices[0]
 }
 
-// ---- hash router: #/board, #/commodity/rice, #/map, #/planner, #/whatif, #/pipeline
+// ---- hash router: #/board, #/commodity/rice, #/map, #/planner, #/pipeline
 function parseHash() {
   const h = (window.location.hash || '#/board').replace(/^#\/?/, '')
   const [page, arg] = h.split('/')
@@ -53,6 +55,35 @@ export function AppProvider({ children }) {
     setDataVersion((v) => v + 1)
   }, [])
 
+  const [profile, setProfile] = useState(loadProfile)
+  const profileUserId = useRef('')
+
+  // Load the signed-in user's profile: Supabase metadata is the source of truth,
+  // the per-user localStorage copy fills any fields metadata does not have yet.
+  const applyUser = useCallback((user) => {
+    profileUserId.current = user?.id || ''
+    if (!user) {
+      setProfile({ ...DEFAULT_PROFILE })
+      return
+    }
+    const local = loadProfile(user.id)
+    const merged = mergeProfile(local, profileFromUser(user))
+    setProfile(merged)
+    persistProfile(merged, user.id)
+  }, [])
+
+  useEffect(() => {
+    if (!supabase) return
+    let alive = true
+    supabase.auth.getSession().then(({ data }) => {
+      if (alive) applyUser(data.session?.user ?? null)
+    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (alive) applyUser(session?.user ?? null)
+    })
+    return () => { alive = false; sub.subscription.unsubscribe() }
+  }, [applyUser])
+
   useEffect(() => {
     const on = () => setRoute(parseHash())
     window.addEventListener('hashchange', on)
@@ -70,7 +101,7 @@ export function AppProvider({ children }) {
       .catch((e) => setMetaError(e.message))
       .finally(() => { metaLoadInFlight.current = false })
   }, [])
-  useEffect(loadMeta, [loadMeta, dataVersion])
+  useEffect(loadMeta, [loadMeta])
 
   // Background poll: bump dataVersion (which flushes the cache) when /meta's data_version
   // changes outside this tab, e.g. a scheduler run or a pipeline run from another client.
@@ -113,6 +144,12 @@ export function AppProvider({ children }) {
 
   const t = useCallback((k, v) => translate(lang, k, v), [lang])
   const nav = useCallback((page, arg) => { window.location.hash = '/' + page + (arg ? '/' + arg : ''); window.scrollTo(0, 0) }, [])
+  const updateProfile = useCallback((next) => {
+    setProfile((prev) => {
+      const merged = { ...prev, ...next }
+      return persistProfile(merged, profileUserId.current)
+    })
+  }, [])
 
   const prov = useMemo(() => meta && (meta.provinces.find((p) => p.id === province) || meta.provinces[0]), [meta, province])
   const commodityBy = useMemo(() => (meta ? Object.fromEntries(meta.commodities.map((c) => [c.id, c])) : {}), [meta])
@@ -124,7 +161,7 @@ export function AppProvider({ children }) {
 
   const value = {
     route, nav, meta, metaError, loadMeta, province: prov ? prov.id : province, prov, setProvince, horizon, horizonPref, setHorizon: setHorizonPref, horizonChoices,
-    lang, setLang, theme, setTheme, t, commodityBy, bumpData, dataVersion,
+    lang, setLang, theme, setTheme, t, commodityBy, bumpData, dataVersion, profile, updateProfile,
   }
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }

@@ -4,24 +4,11 @@ export const peso0 = (v) => peso(v, 0)
 export const pct = (v, d = 1) => (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d) + '%'
 export const fmtDate = (iso, opts) =>
   new Date(iso + 'T00:00:00').toLocaleDateString('en-PH', opts || { month: 'short', day: 'numeric' })
-export const addDays = (iso, n) => {
-  const d = new Date(iso + 'T00:00:00')
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-export const clamp = (v, a, b) => Math.max(a, Math.min(b, v))
 
 export const SIGNALS = {
   surge: { arrow: '▲', cls: 'surge' },
   dip: { arrow: '▼', cls: 'dip' },
   stable: { arrow: '■', cls: 'stable' },
-}
-
-// Same thresholds as the backend, used by the What-If lab after adjusting a forecast.
-export function classify(changePct) {
-  if (changePct >= 2.5) return 'surge'
-  if (changePct <= -2.5) return 'dip'
-  return 'stable'
 }
 
 export function nearestProvince(provinces, lat, lon) {

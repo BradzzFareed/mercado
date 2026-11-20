@@ -64,3 +64,18 @@ describe('Detail with a missing horizon', () => {
     expect(html).toMatch(/aria-checked="true"[^>]*>hz\.30/)
   })
 })
+
+describe('Detail inline model-lab panel', () => {
+  it('lists the five models with the ensemble highlighted, a dash for no direction, and weights as percentages', () => {
+    setup(realOnly, 14)
+    const html = renderToStaticMarkup(<Detail id="rice" />)
+    const body = html.split('<tbody>')[1].split('</tbody>')[0]
+    expect(body.match(/<tr/g)).toHaveLength(5)
+    expect(body.match(/<tr class="hl">/g)).toHaveLength(1)
+    expect(body).toMatch(/<tr class="hl"><td>Ensemble<\/td>/)
+    expect(body).toMatch(/Ridge<\/td><td class="num">5\.0%<\/td><td class="num">–<\/td><td class="num">20%<\/td>/)
+    expect(body).toMatch(/GBM<\/td><td class="num">4\.0%<\/td><td class="num">55%<\/td><td class="num">20%<\/td>/)
+    expect(body).toMatch(/Holt-Winters<\/td><td class="num">6\.0%<\/td><td class="num">50%<\/td><td class="num">30%<\/td>/)
+    expect(body).toMatch(/Naive<\/td><td class="num">7\.0%<\/td><td class="num">50%<\/td><td class="num">30%<\/td>/)
+  })
+})
