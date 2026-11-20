@@ -1,7 +1,30 @@
 import { Logo } from './Icons'
-import { Sprout, TrendingUp, Handshake } from 'lucide-react'
+import { Sprout, TrendingUp, Handshake, Sun, Moon } from 'lucide-react'
+import { useApp } from '../state'
 
 export default function AuthShell({ children }) {
+  const { theme, setTheme } = useApp()
+
+  const dark = theme
+    ? theme === 'dark'
+    : typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+
+  const toggleTheme = () => setTheme(dark ? 'light' : 'dark')
+
+  // Theme tokens matching Layout.jsx
+  const bgApp = dark ? '#060e0a' : '#ecfdf5'
+  const gridColor = dark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(16, 185, 129, 0.06)'
+  const heroBg = dark
+    ? 'linear-gradient(135deg, rgba(8, 47, 31, 0.3) 0%, rgba(6, 14, 10, 0) 100%)'
+    : 'linear-gradient(135deg, rgba(16, 185, 129, 0.14) 0%, rgba(236, 253, 245, 0.4) 100%)'
+  const formSideBg = dark ? 'rgba(6, 14, 10, 0.7)' : 'rgba(255, 255, 255, 0.75)'
+  const borderSubtle = dark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(16, 185, 129, 0.2)'
+  const textMain = dark ? '#ffffff' : '#022c22'
+  const textSecondary = dark ? '#cbd5e1' : '#065f46'
+  const textMuted = dark ? '#94a3b8' : '#047857'
+  const surfaceControl = dark ? 'rgba(255, 255, 255, 0.03)' : '#ffffff'
+  const borderControl = dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(16, 185, 129, 0.28)'
+
   return (
     <div className="auth-container">
       <style>{`
@@ -12,14 +35,15 @@ export default function AuthShell({ children }) {
           display: flex;
           align-items: center;
           justify-content: center;
-          background-color: #060e0a;
+          background-color: ${bgApp};
           background-image:
-            linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            linear-gradient(to right, ${gridColor} 1px, transparent 1px),
+            linear-gradient(to bottom, ${gridColor} 1px, transparent 1px);
           background-size: 40px 40px;
           font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
           position: relative;
           overflow-x: hidden;
+          transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .auth-container::before {
@@ -46,6 +70,66 @@ export default function AuthShell({ children }) {
           pointer-events: none;
         }
 
+        .auth-theme-toggle {
+                  position: fixed;
+                  top: 1.25rem;
+                  right: 1.5rem;
+                  z-index: 50;
+                  width: 66px;
+                  height: 34px;
+                  padding: 3px;
+                  border-radius: 999px;
+                  border: 1px solid ${borderControl};
+                  background: ${dark ? 'rgba(11, 26, 20, 0.9)' : '#d1fae5'};
+                  backdrop-filter: blur(12px);
+                  cursor: pointer;
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  box-shadow: 0 4px 14px ${dark ? 'rgba(0, 0, 0, 0.35)' : 'rgba(2, 44, 34, 0.1)'};
+                  transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+                }
+
+                .auth-theme-toggle:hover {
+                  border-color: #10b981;
+                  transform: translateY(-1px);
+                }
+
+                .auth-theme-track-icons {
+                  position: relative;
+                  z-index: 2;
+                  width: 100%;
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  padding: 0 6px;
+                  pointer-events: none;
+                }
+
+                .auth-theme-icon-sun {
+                  color: ${dark ? '#64748b' : '#ffffff'};
+                  transition: color 0.3s ease;
+                }
+
+                .auth-theme-icon-moon {
+                  color: ${dark ? '#ffffff' : '#047857'};
+                  transition: color 0.3s ease;
+                }
+
+                .auth-theme-thumb {
+                  position: absolute;
+                  top: 3px;
+                  left: 3px;
+                  width: 26px;
+                  height: 26px;
+                  border-radius: 50%;
+                  background: #10b981;
+                  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.45);
+                  transform: ${dark ? 'translateX(32px)' : 'translateX(0px)'};
+                  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.3s ease;
+                  z-index: 1;
+                }
+
         .auth-hero {
           flex: 1.1;
           padding: 4rem 5rem;
@@ -55,9 +139,10 @@ export default function AuthShell({ children }) {
           gap: 2.5rem;
           position: relative;
           z-index: 1;
-          border-right: 1px solid rgba(255, 255, 255, 0.06);
-          background: linear-gradient(135deg, rgba(8, 47, 31, 0.3) 0%, rgba(6, 14, 10, 0) 100%);
+          border-right: 1px solid ${borderSubtle};
+          background: ${heroBg};
           min-height: 100vh;
+          transition: background 0.3s ease, border-color 0.3s ease;
         }
 
         .auth-form-side {
@@ -68,9 +153,10 @@ export default function AuthShell({ children }) {
           padding: 2.5rem 3rem;
           position: relative;
           z-index: 1;
-          background: rgba(6, 14, 10, 0.7);
+          background: ${formSideBg};
           backdrop-filter: blur(20px);
           min-height: 100vh;
+          transition: background-color 0.3s ease;
         }
 
         .brand-logo {
@@ -80,7 +166,7 @@ export default function AuthShell({ children }) {
           font-size: 1.75rem;
           font-weight: 700;
           letter-spacing: -0.03em;
-          color: #fff;
+          color: ${textMain};
         }
 
         .hero-content h1 {
@@ -89,11 +175,11 @@ export default function AuthShell({ children }) {
           line-height: 1.2;
           letter-spacing: -0.03em;
           margin: 0 0 1rem 0;
-          color: #ffffff;
+          color: ${textMain};
         }
 
         .hero-content p {
-          color: #94a3b8;
+          color: ${textMuted};
           font-size: 1.1rem;
           line-height: 1.6;
           max-width: 440px;
@@ -111,7 +197,7 @@ export default function AuthShell({ children }) {
           display: flex;
           align-items: center;
           gap: 1rem;
-          color: #cbd5e1;
+          color: ${textSecondary};
           font-weight: 500;
           font-size: 0.95rem;
         }
@@ -120,12 +206,12 @@ export default function AuthShell({ children }) {
           width: 38px;
           height: 38px;
           border-radius: 10px;
-          background: rgba(16, 185, 129, 0.1);
+          background: rgba(16, 185, 129, 0.12);
           color: #10b981;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid rgba(16, 185, 129, 0.2);
+          border: 1px solid rgba(16, 185, 129, 0.25);
           flex-shrink: 0;
         }
 
@@ -139,21 +225,21 @@ export default function AuthShell({ children }) {
           font-weight: 700;
           letter-spacing: -0.02em;
           margin: 0 0 0.5rem 0;
-          color: #fff;
+          color: ${textMain};
         }
 
         .auth-header-text p {
-          color: #94a3b8;
+          color: ${textMuted};
           font-size: 0.95rem;
           margin: 0 0 1.75rem 0;
         }
 
         .tab-switcher {
           display: flex;
-          background: rgba(255, 255, 255, 0.03);
+          background: ${dark ? 'rgba(255, 255, 255, 0.03)' : '#d1fae5'};
           padding: 4px;
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.06);
+          border: 1px solid ${borderSubtle};
           margin-bottom: 1.75rem;
         }
 
@@ -162,7 +248,7 @@ export default function AuthShell({ children }) {
           padding: 0.75rem;
           border: none;
           background: transparent;
-          color: #94a3b8;
+          color: ${textMuted};
           font-weight: 600;
           font-size: 0.9rem;
           border-radius: 9px;
@@ -177,8 +263,8 @@ export default function AuthShell({ children }) {
         }
 
         .avatar-carousel-box {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: ${surfaceControl};
+          border: 1px solid ${borderControl};
           border-radius: 14px;
           padding: 1rem 0.75rem 0.85rem;
           user-select: none;
@@ -195,9 +281,9 @@ export default function AuthShell({ children }) {
           width: 36px;
           height: 36px;
           border-radius: 50%;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          background: rgba(255, 255, 255, 0.04);
-          color: #cbd5e1;
+          border: 1px solid ${borderControl};
+          background: ${dark ? 'rgba(255, 255, 255, 0.04)' : '#ecfdf5'};
+          color: ${textSecondary};
           display: flex;
           align-items: center;
           justify-content: center;
@@ -245,7 +331,7 @@ export default function AuthShell({ children }) {
           overflow: hidden;
           border: 3px solid #10b981;
           box-shadow: 0 0 18px rgba(16, 185, 129, 0.25);
-          background: #0f291e;
+          background: ${dark ? '#0f291e' : '#d1fae5'};
         }
 
         .avatar-circle img {
@@ -276,7 +362,7 @@ export default function AuthShell({ children }) {
           border-radius: 999px;
           border: none;
           padding: 0;
-          background: rgba(255, 255, 255, 0.18);
+          background: ${dark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(16, 185, 129, 0.28)'};
           cursor: pointer;
           transition: all 0.2s ease;
         }
@@ -301,7 +387,7 @@ export default function AuthShell({ children }) {
           display: block;
           font-size: 0.85rem;
           font-weight: 600;
-          color: #cbd5e1;
+          color: ${textSecondary};
           margin-bottom: 0.45rem;
         }
 
@@ -311,7 +397,7 @@ export default function AuthShell({ children }) {
 
         .swipe-hint {
           font-size: 0.75rem;
-          color: #64748b;
+          color: ${textMuted};
         }
 
         .input-field-wrapper {
@@ -323,7 +409,7 @@ export default function AuthShell({ children }) {
         .input-icon {
           position: absolute;
           left: 1rem;
-          color: #64748b;
+          color: ${textMuted};
         }
 
         .password-toggle-btn {
@@ -331,7 +417,7 @@ export default function AuthShell({ children }) {
           right: 1rem;
           background: transparent;
           border: none;
-          color: #64748b;
+          color: ${textMuted};
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -340,24 +426,28 @@ export default function AuthShell({ children }) {
         }
 
         .password-toggle-btn:hover {
-          color: #cbd5e1;
+          color: ${textMain};
         }
 
         .input-control {
           width: 100%;
           padding: 0.8rem 2.75rem 0.8rem 2.75rem;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: ${surfaceControl};
+          border: 1px solid ${borderControl};
           border-radius: 10px;
-          color: #fff;
+          color: ${textMain};
           font-size: 0.95rem;
           outline: none;
           transition: all 0.2s ease;
         }
 
+        .input-control::placeholder {
+          color: ${dark ? '#64748b' : '#6b7280'};
+        }
+
         .input-control:focus {
           border-color: #10b981;
-          background: rgba(255, 255, 255, 0.05);
+          background: ${dark ? 'rgba(255, 255, 255, 0.05)' : '#ffffff'};
           box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
         }
 
@@ -367,6 +457,10 @@ export default function AuthShell({ children }) {
           align-items: center;
           margin-bottom: 1.5rem;
           font-size: 0.85rem;
+        }
+
+        .form-actions label {
+          color: ${textMuted} !important;
         }
 
         .forgot-link {
@@ -406,7 +500,7 @@ export default function AuthShell({ children }) {
           align-items: center;
           gap: 0.75rem;
           margin: 1.25rem 0;
-          color: #64748b;
+          color: ${textMuted};
           font-size: 0.8rem;
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -417,16 +511,16 @@ export default function AuthShell({ children }) {
           content: '';
           flex: 1;
           height: 1px;
-          background: rgba(255, 255, 255, 0.08);
+          background: ${borderSubtle};
         }
 
         .google-btn {
           width: 100%;
           padding: 0.85rem;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: ${dark ? 'rgba(255, 255, 255, 0.04)' : '#ffffff'};
+          border: 1px solid ${borderControl};
           border-radius: 10px;
-          color: #f8fafc;
+          color: ${textMain};
           font-size: 0.92rem;
           font-weight: 600;
           cursor: pointer;
@@ -438,8 +532,8 @@ export default function AuthShell({ children }) {
         }
 
         .google-btn:hover:not(:disabled) {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(255, 255, 255, 0.2);
+          background: ${dark ? 'rgba(255, 255, 255, 0.08)' : '#f0fdf4'};
+          border-color: #10b981;
           transform: translateY(-1px);
         }
 
@@ -459,10 +553,26 @@ export default function AuthShell({ children }) {
           }
           .auth-hero {
             border-right: none;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid ${borderSubtle};
           }
         }
       `}</style>
+
+      <button
+              type="button"
+              role="switch"
+              aria-checked={dark}
+              className="auth-theme-toggle"
+              onClick={toggleTheme}
+              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              <span className="auth-theme-thumb" aria-hidden="true" />
+              <span className="auth-theme-track-icons" aria-hidden="true">
+                <Sun size={14} className="auth-theme-icon-sun" />
+                <Moon size={14} className="auth-theme-icon-moon" />
+              </span>
+            </button>
 
       <div className="auth-hero">
         <div className="brand-logo">
@@ -491,7 +601,7 @@ export default function AuthShell({ children }) {
           </div>
         </div>
 
-        <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: 'auto' }}>
+        <div style={{ color: textMuted, fontSize: '0.85rem', marginTop: 'auto' }}>
           Developed by the Trinity Build.
         </div>
       </div>
