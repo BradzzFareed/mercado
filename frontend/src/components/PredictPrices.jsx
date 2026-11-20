@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useApp } from '../state'
 import { pct, peso } from '../util'
-import { basketTotals, factorScale, scenarioRows } from '../predictMath'
+import { basketTotals, factorScale, horizonFor, offeredHorizons, scenarioRows } from '../predictMath'
 
 const UNITS = [
   ['day', 'predict.days', 'predict.day', 'DD'],
@@ -27,12 +27,6 @@ function rangeFrom(start, end, units) {
   const b = toDate(pick(end))
   if (!a || !b) return null
   return { start: a, end: b, days: Math.max(1, Math.round((b - a) / 86400000)) }
-}
-
-function horizonFor(days, available) {
-  const wanted = days <= 10 ? 7 : days <= 21 ? 14 : 30
-  if (!available?.length || available.includes(wanted)) return wanted
-  return available.reduce((best, h) => (Math.abs(h - wanted) < Math.abs(best - wanted) ? h : best), available[0])
 }
 
 function PredictIcon({ size = 26 }) {
@@ -67,10 +61,11 @@ export default function PredictPrices({ items = [] }) {
   const activeUnits = UNITS.filter(([key]) => units[key])
   const rangeWindow = useMemo(() => rangeFrom(range.start, range.end, units), [range, units])
 
+  const available = useMemo(() => offeredHorizons(items), [items])
+
   const computed = useMemo(() => {
     if (!rangeWindow || !items.length) return null
-    const available = [...new Set([horizon, ...items.flatMap((i) => i.horizons_available || [])])].filter(Boolean)
-    const h = horizonFor(rangeWindow.days, available)
+    const h = horizonFor(rangeWindow.days, available, horizon)
     const rows = scenarioRows(items, {
       horizon: h,
       disaster,
@@ -90,7 +85,7 @@ export default function PredictPrices({ items = [] }) {
       }
     })
     return { horizon: h, days: rangeWindow.days, rows: display, ...totals, disaster }
-  }, [rangeWindow, items, horizon, disaster, commodityBy, t])
+  }, [rangeWindow, items, available, horizon, disaster, commodityBy, t])
 
   // Choosing a disaster (or editing the range once one is chosen) re-runs the
   // scenario forecast; the result lands asynchronously so the UI can show a
@@ -258,7 +253,9 @@ export default function PredictPrices({ items = [] }) {
                 </div>
               )}
               {!loading && !result && rangeWindow && (
-                <p className="pp-hint">{t('predict.baseline')} · {rangeWindow.days}d</p>
+                available.length
+                  ? <p className="pp-hint">{t('predict.baseline')} · {rangeWindow.days}d</p>
+                  : <p className="pp-hint">{t('predict.none')}</p>
               )}
             </div>
 

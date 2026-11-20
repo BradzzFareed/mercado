@@ -27,6 +27,29 @@ export function factorScale(days) {
   return clamp(days / 30, 0.25, 1)
 }
 
+// Horizons that at least one item offers, ascending. Empty when none do.
+export function offeredHorizons(items) {
+  const offered = new Set()
+  for (const item of items) {
+    for (const h of item.horizons_available || []) offered.add(Number(h))
+  }
+  return [...offered].filter(Number.isFinite).sort((a, b) => a - b)
+}
+
+// Maps the window to 7/14/30 and snaps to the nearest offered horizon. `preferred`
+// only breaks an exact distance tie. With no offered horizons the canonical value is returned.
+export function horizonFor(days, available, preferred = null) {
+  const wanted = days <= 10 ? 7 : days <= 21 ? 14 : 30
+  if (!available?.length || available.includes(wanted)) return wanted
+  let best = available[0]
+  for (const h of available) {
+    const d = Math.abs(h - wanted)
+    const bd = Math.abs(best - wanted)
+    if (d < bd || (d === bd && h === preferred)) best = h
+  }
+  return best
+}
+
 export function scenarioPrice(basePrice, impact, scale) {
   return basePrice * (1 + impact * scale / 100)
 }
