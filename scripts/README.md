@@ -128,3 +128,16 @@ pwsh -File scripts\setup_live_data.ps1 # Windows Powershell 7
 
 Options: `--port N` / `-Port N`, `--skip-tests` / `-SkipTests`, `--force-reset` / `-ForceReset`. See `scripts/README.md` for the steps, the rule that decides whether an existing database is kept or backed up first, and how to stop the server.
 ````
+
+## Initiate these commands before running
+````markdown
+### Making a fresh copy of the local db
+
+```powershell
+Remove-Item backend\data\mercado.db* -Force -ErrorAction SilentlyContinue
+```
+
+```bash
+rm -f backend/data/mercado.db backend/data/mercado.db-wal backend/data/mercado.db-shm
+```
+````

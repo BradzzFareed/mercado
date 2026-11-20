@@ -279,7 +279,7 @@ Context fields: `route`, `nav`, `meta`, `metaError`, `loadMeta`, `province`, `pr
 # Backend (from backend/)
 uv sync
 uv run uvicorn main:app --reload        # :8000, docs at /docs
-uv run pytest -q                        # 130 tests, about 5 minutes on a typical dev machine, offline (no network needed)
+uv run pytest -q                        # 130 tests, about 1-4 minutes depending on the machine (about 1 minute on a fast dev machine), offline (no network needed)
 
 # Live data (from the repo root; see scripts/README.md)
 bash scripts/setup_live_data.sh         # PowerShell: scripts\setup_live_data.ps1. Keeps an existing DB only if it has a recorded source_token (scripts/db_state.py); otherwise backs it up to ~/mercado_backup and resets it.

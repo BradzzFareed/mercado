@@ -4,14 +4,18 @@ import LocationPicker from './LocationPicker'
 import { Logo, IconSun, IconMoon } from './Icons'
 import Avatar from './Avatar'
 import { ROLE, addressLine, displayName, titleCaseRegion } from '../profile'
-import { LogOut, Bell, Menu, X, Globe, MapPin, LayoutGrid, BookOpen, ClipboardList, Database } from 'lucide-react'
+import { LogOut, Bell, Menu, X, Globe, MapPin, LayoutGrid, BookOpen, ClipboardList, Database, Info } from 'lucide-react'
 import { buildAlerts } from '../alerts'
 import NotificationsBell from './NotificationsBell'
 import { supabase } from '../supabaseClient'
 
 // Drawer menu: Profile is reached through the profile card at the top, not a menu row.
 const NAV = [
-  ['board', 'drawer.board', LayoutGrid], ['map', 'drawer.map', BookOpen], ['planner', 'drawer.planner', ClipboardList], ['pipeline', 'drawer.pipeline', Database],
+  ['board', 'drawer.board', LayoutGrid],
+  ['map', 'drawer.map', BookOpen],
+  ['planner', 'drawer.planner', ClipboardList],
+  ['pipeline', 'drawer.pipeline', Database],
+  ['about', 'drawer.about', Info],
 ]
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
@@ -27,6 +31,11 @@ export default function Layout({ children }) {
   const navRefs = useRef({})
   const [pill, setPill] = useState(null)
   const [user, setUser] = useState(null)
+
+  const navLabel = (key, fallback) => {
+    const val = t(key)
+    return !val || val === key ? fallback : val
+  }
 
   useEffect(() => {
     if (!supabase) return
@@ -153,18 +162,18 @@ export default function Layout({ children }) {
     <div className="app-global-wrapper">
       <style>{`
         .app-global-wrapper {
-          min-height: 100vh; 
+          min-height: 100vh;
           background-color: ${bgApp};
-          background-image: 
+          background-image:
             linear-gradient(to right, ${gridColor} 1px, transparent 1px),
             linear-gradient(to bottom, ${gridColor} 1px, transparent 1px);
           background-size: 40px 40px;
           color: ${textMain};
-          font-family: 'Plus Jakarta Sans', system-ui, sans-serif; 
+          font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
           position: relative;
           transition: background-color 0.3s ease, color 0.3s ease;
         }
-        
+
         .app-global-wrapper::before {
           content: ''; position: absolute; top: -10%; left: -5%; width: 40vw; height: 40vw;
           background: radial-gradient(circle, rgba(16, 185, 129, 0.12) 0%, rgba(6, 14, 10, 0) 70%);
@@ -190,14 +199,14 @@ export default function Layout({ children }) {
         .hamburger-btn:hover { color: #10b981; background: ${hoverBg}; }
         .header-brand { display: flex; align-items: center; gap: 0.75rem; font-size: 1.5rem; font-weight: 700; color: ${textMain}; cursor: pointer; background: none; border: 0; padding: 0; font-family: inherit; transition: color 0.2s; }
         .header-brand:hover { color: #10b981; }
-        
+
         .icon-btn { background: ${hoverBg}; border: 1px solid ${borderSubtle}; color: ${textMuted}; width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: background-color 0.2s, color 0.2s, border-color 0.2s; }
         .icon-btn:hover { background: rgba(16, 185, 129, 0.15); color: #10b981; border-color: rgba(16, 185, 129, 0.3); }
         .alert-badge { position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 99px; background: #dc2626; color: #fff; font-size: 0.68rem; font-weight: 700; line-height: 18px; text-align: center; box-sizing: border-box; }
-        
+
         .menu-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
         .menu-overlay.open { opacity: 1; pointer-events: auto; }
-        
+
         .side-drawer { position: fixed; top: 0; left: -360px; width: 340px; height: 100vh; background: ${dark ? '#0b1a14' : '#e4fff1'}; border-right: 1px solid ${borderSubtle}; z-index: 1000; display: flex; flex-direction: column; padding: 1.75rem 1.5rem; overflow-y: auto; overscroll-behavior: contain; transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease; }
         .side-drawer.open { left: 0; }
         .drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
@@ -303,7 +312,7 @@ export default function Layout({ children }) {
                   onClick={() => { closeMenu(); nav(id); }}
                   aria-current={active === id ? 'page' : undefined}
                 >
-                  <Icon size={18} /> {t(key)}
+                  <Icon size={18} /> {navLabel(key, 'About')}
                 </button>
               </li>
             ))}
@@ -318,7 +327,7 @@ export default function Layout({ children }) {
             </li>
           </ul>
         </div>
-        
+
         <div className="drawer-footer">
           <button className="footer-action" onClick={handleLogout}><LogOut size={16} /> {t('logout')}</button>
           <div style={{ display: 'flex', gap: '1rem' }}>
