@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, Check, Trash2 } from 'lucide-react'
+import { Archive, Bell, Check } from 'lucide-react'
 import { useApp } from '../state'
 import { setNotificationStatus, useNotificationList } from '../notifications'
 
@@ -34,7 +34,7 @@ export default function NotificationsBell({ alerts, commodityBy }) {
 
   const discard = (e, id) => {
     e.stopPropagation()
-    setNotificationStatus([id], 'deleted')
+    setNotificationStatus([id], 'archived')
   }
 
   return (
@@ -97,11 +97,11 @@ export default function NotificationsBell({ alerts, commodityBy }) {
                   <button
                     type="button"
                     className="notif-pop-act remove"
-                    aria-label={t('notif.remove')}
-                    title={t('notif.remove')}
+                    aria-label={t('notif.archive')}
+                    title={t('notif.archive')}
                     onClick={(e) => discard(e, n.id)}
                   >
-                    <Trash2 size={22} />
+                    <Archive size={22} />
                   </button>
                 </span>
               </div>

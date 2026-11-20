@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useApp, useApi } from '../state'
-import { PageHead, HorizonToggle, Training, ErrorBox, SampleBadge } from '../components/Common'
+import { PageHead, Training, ErrorBox, SampleBadge } from '../components/Common'
+import PredictPrices from '../components/PredictPrices'
 import { PriceTag, SignalChip } from '../components/PriceTag'
 import { Sparkline } from '../components/Charts'
 import Avatar from '../components/Avatar'
@@ -163,7 +164,7 @@ export default function Board() {
 
       <PageHead title={t('board.title')} sub={t('board.sub', { place: `${prov.name} · ${prov.market}` })}>
         <SampleBadge />
-        <HorizonToggle />
+        <PredictPrices items={data.items} basket={bk} />
       </PageHead>
 
       <section className="kpis" aria-label="Summary">

@@ -646,7 +646,7 @@ export default function Auth({ onLogin }) {
       {/* Left Inviting Hero Section */}
       <div className="auth-hero">
         <div className="brand-logo">
-          <Logo size={75} /> mercado
+          <Logo size={75} /> Mercado
         </div>
 
         <div className="hero-content">

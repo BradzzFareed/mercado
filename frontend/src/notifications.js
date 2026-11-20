@@ -1,7 +1,7 @@
 // Buying-alert notifications.
 //
 // Alerts are derived from the forecast (see alerts.js), but their read state
-// (new / done / deleted) belongs to the device and must survive reloads and
+// (new / done / archived) belongs to the device and must survive reloads and
 // navigation. This module keeps a tiny external store persisted to
 // localStorage, plus the sound that plays when a new alert arrives.
 import { useEffect, useSyncExternalStore } from 'react'
@@ -38,11 +38,18 @@ export function categoryLabel(id) {
   return found ? found.label : id
 }
 
+// "deleted" was the old name for the Archive tab; migrate it on read so existing
+// devices keep their archived notifications after the rename.
+const STATUS_MIGRATIONS = { deleted: 'archived' }
+const migrate = (n) => (n && STATUS_MIGRATIONS[n.status]
+  ? { ...n, status: STATUS_MIGRATIONS[n.status] }
+  : n)
+
 function read() {
   try {
     const raw = localStorage.getItem(KEY)
     const parsed = raw ? JSON.parse(raw) : []
-    return Array.isArray(parsed) ? parsed : []
+    return Array.isArray(parsed) ? parsed.map(migrate) : []
   } catch {
     return []
   }
