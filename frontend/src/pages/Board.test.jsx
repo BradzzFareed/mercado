@@ -23,7 +23,7 @@ const overview = {
 
 describe('Board with a mixed horizon list', () => {
   it('renders at 14 without throwing and shows "—" where 14 is missing', () => {
-    mocks.app = { province: 'ncr', prov: { name: 'NCR', market: 'Manila' }, horizon: 14, t: (k) => k, lang: 'en', commodityBy, nav: () => {}, dataVersion: 0, meta: { data: { sources: {} } } }
+    mocks.app = { province: 'ncr', prov: { name: 'NCR', market: 'Manila' }, horizon: 14, horizonChoices: [14, 30], setHorizon: () => {}, t: (k) => k, lang: 'en', commodityBy, nav: () => {}, dataVersion: 0, meta: { data: { sources: {} } } }
     mocks.api = { data: overview, error: null, loading: false, reload: () => {} }
     const html = renderToStaticMarkup(<Board />)
     expect(html).toContain('Rice')

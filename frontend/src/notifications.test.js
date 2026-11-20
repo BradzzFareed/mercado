@@ -120,6 +120,16 @@ describe('removeNotifications', () => {
 })
 
 describe('persistence across imports', () => {
+  it('migrates the old deleted status to archived', async () => {
+    store.set(KEY, JSON.stringify([
+      { id: 'rice:surge', commodity: 'rice', signal: 'surge', status: 'deleted' },
+    ]))
+    const { syncNotifications, setNotificationStatus } = await load()
+    syncNotifications([alert('pork', 'dip')], {})
+    setNotificationStatus(['pork:dip'], 'done')
+    expect(stored().find((n) => n.id === 'rice:surge').status).toBe('archived')
+  })
+
   it('re-reads persisted records on a fresh import', async () => {
     store.set(KEY, JSON.stringify([
       { id: 'rice:surge', commodity: 'rice', signal: 'surge', status: 'new' },

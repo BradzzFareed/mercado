@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Check, CornerUpLeft, History, ListChecks, Search, Trash2 } from 'lucide-react'
+import { Archive, Check, CornerUpLeft, History, ListChecks, Search, Trash2 } from 'lucide-react'
 import { useApp, useApi } from '../state'
 import { buildAlerts } from '../alerts'
 import {
@@ -8,9 +8,23 @@ import {
 
 const TABS = [
   { id: 'new', label: 'notif.tab.new' },
-  { id: 'deleted', label: 'notif.tab.deleted' },
+  { id: 'archived', label: 'notif.tab.archive' },
   { id: 'done', label: 'notif.tab.done' },
 ]
+
+const SIGNAL_OPTIONS = [
+  { id: 'surge', label: 'notif.signal.surge' },
+  { id: 'dip', label: 'notif.signal.dip' },
+]
+
+// The notification cell shows when the alert was first seen, e.g. "11/02/2026 - 6:00 PM".
+const formatStamp = (value) => {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const date = d.toLocaleDateString('en-PH', { month: '2-digit', day: '2-digit', year: 'numeric' })
+  const time = d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true })
+  return `${date} - ${time}`
+}
 
 export default function Notifications() {
   const { province, horizon, t, commodityBy, route, dataVersion } = useApp()
@@ -26,6 +40,7 @@ export default function Notifications() {
   const [tab, setTab] = useState(opened ? opened.status : 'new')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
+  const [signal, setSignal] = useState('')
   const [selectMode, setSelectMode] = useState(false)
   const [selected, setSelected] = useState(() => new Set())
 
@@ -39,6 +54,7 @@ export default function Notifications() {
     return list
       .filter((n) => n.status === tab)
       .filter((n) => !category || n.category === category)
+      .filter((n) => !signal || n.signal === signal)
       .filter((n) => {
         if (!q) return true
         const c = commodityBy[n.commodity]
@@ -46,11 +62,12 @@ export default function Notifications() {
         return hay.includes(q)
       })
       .sort((a, b) => b.createdAt - a.createdAt)
-  }, [list, tab, category, query, commodityBy])
+  }, [list, tab, category, signal, query, commodityBy])
 
   const changeTab = (id) => { setTab(id); resetSelection() }
   const changeQuery = (value) => { setQuery(value); resetSelection() }
   const changeCategory = (value) => { setCategory(value); resetSelection() }
+  const changeSignal = (value) => { setSignal(value); resetSelection() }
 
   const toggle = (id) => {
     setSelected((prev) => {
@@ -77,16 +94,16 @@ export default function Notifications() {
   const applyCheck = () => {
     const ids = [...selected]
     if (!ids.length) return
-    // New -> done. Done/deleted -> back to the notification list.
+    // New -> done. Done/archived -> back to the notification list.
     setNotificationStatus(ids, tab === 'new' ? 'done' : 'new')
     resetSelection()
   }
 
-  const applyRemove = () => {
+  const applyArchive = () => {
     const ids = [...selected]
     if (!ids.length) return
-    if (tab === 'deleted') removeNotifications(ids)
-    else setNotificationStatus(ids, 'deleted')
+    if (tab === 'archived') removeNotifications(ids)
+    else setNotificationStatus(ids, 'archived')
     resetSelection()
   }
 
@@ -107,15 +124,15 @@ export default function Notifications() {
       <button
         type="button"
         className="notif-act remove"
-        aria-label={t('notif.remove')}
-        title={t('notif.remove')}
+        aria-label={tab === 'archived' ? t('notif.remove') : t('notif.archive')}
+        title={tab === 'archived' ? t('notif.remove') : t('notif.archive')}
         onClick={(e) => {
           e.stopPropagation()
-          if (tab === 'deleted') removeNotifications([n.id])
-          else setNotificationStatus([n.id], 'deleted')
+          if (tab === 'archived') removeNotifications([n.id])
+          else setNotificationStatus([n.id], 'archived')
         }}
       >
-        <Trash2 size={26} />
+        {tab === 'archived' ? <Trash2 size={26} /> : <Archive size={26} />}
       </button>
     </span>
   )
@@ -143,6 +160,13 @@ export default function Notifications() {
           <select value={category} onChange={(e) => changeCategory(e.target.value)} aria-label={t('notif.category')}>
             <option value="">{t('notif.category.placeholder')}</option>
             {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+          </select>
+        </label>
+        <label className="notif-category-field notif-status-field">
+          <span className="notif-search-label">{t('notif.status')}</span>
+          <select value={signal} onChange={(e) => changeSignal(e.target.value)} aria-label={t('notif.status')}>
+            <option value="">{t('notif.status.placeholder')}</option>
+            {SIGNAL_OPTIONS.map((s) => <option key={s.id} value={s.id}>{t(s.label)}</option>)}
           </select>
         </label>
       </div>
@@ -208,9 +232,13 @@ export default function Notifications() {
               >
                 <span className="notif-row-icon" aria-hidden="true">{n.icon}</span>
                 <span className="notif-row-body">
-                  <span className={`notif-kicker ${n.signal}`}>
-                    <span className="notif-arrow" aria-hidden="true">{n.signal === 'surge' ? '▲' : '▼'}</span>
-                    {t('sig.' + n.signal)} {n.change > 0 ? '+' : ''}{Number(n.change).toFixed(1)}%
+                  <span className="notif-row-head">
+                    <span className="notif-row-name">{commodityBy[n.commodity]?.short || n.commodity}</span>
+                    <span className={`notif-kicker ${n.signal}`}>
+                      <span className="notif-arrow" aria-hidden="true">{n.signal === 'surge' ? '▲' : '▼'}</span>
+                      {t('sig.' + n.signal)} {n.change > 0 ? '+' : ''}{Number(n.change).toFixed(1)}%
+                    </span>
+                    <span className="notif-row-date">{formatStamp(n.createdAt)}</span>
                   </span>
                   <span className="notif-row-text">{n.text}</span>
                 </span>
@@ -240,8 +268,8 @@ export default function Notifications() {
           <button type="button" className="notif-bulk check" onClick={applyCheck} disabled={!selected.size}>
             {t('notif.check')}
           </button>
-          <button type="button" className="notif-bulk remove" onClick={applyRemove} disabled={!selected.size}>
-            {t('notif.remove')}
+          <button type="button" className="notif-bulk remove" onClick={applyArchive} disabled={!selected.size}>
+            {tab === 'archived' ? t('notif.remove') : t('notif.archive')}
           </button>
         </div>
       )}

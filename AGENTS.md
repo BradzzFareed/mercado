@@ -79,9 +79,14 @@ There is no backend linter/formatter config and no TypeScript (frontend is JS/JS
   With a session, `state.jsx` hydrates it from `user_metadata` (`profileFromUser`, merged with
   `mergeProfile`) and keeps a copy in `localStorage` under `mercado.profile.<userId>`. The Profile
   page saves through `updateProfile()` and then `supabase.auth.updateUser({ data: profileMetadata(next) })`.
-- Notifications: `src/notifications.js` keeps read state (`new`, `done`, `deleted`) in `localStorage`
-  under `mercado.notifications`, one record per `commodity:signal`. Alerts come from `buildAlerts()`
+- Notifications: `src/notifications.js` keeps read state (`new`, `done`, `archived`) in `localStorage`
+  under `mercado.notifications`, one record per `commodity:signal`. Legacy `deleted` records are
+  migrated to `archived` on read. Alerts come from `buildAlerts()`
   on the overview, and `NotificationsBell` and `pages/Notifications.jsx` share the same store.
+- Predict Prices (Board header): a client-side disaster scenario (`storm`, `drought`) that multiplies
+  the forecast from the `/overview` data the board already loaded. The math lives in
+  `frontend/src/predictMath.js`. There is no backend or API involvement. The impact table is
+  hard-coded per food group and is not calibrated against historical typhoons or droughts.
 - `model_lab` is still returned by `/api/v1/forecast`, and `Detail.jsx` renders it as an inline panel.
   There is no standalone Model Lab page and no What-If page; the Pipeline page is at `#/pipeline`.
 - `components/Layout.jsx` is the only app shell (header, drawer, nav, language and
