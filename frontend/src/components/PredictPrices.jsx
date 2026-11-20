@@ -1,30 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useApp } from '../state'
 import { pct, peso } from '../util'
-
-// How strongly each food group reacts to a disaster. These are scenario
-// multipliers applied on top of the model's forecast; a storm disrupts fresh
-// produce and fish, while a drought bites hardest into grains and vegetables.
-const IMPACT = {
-  storm: {
-    Grains: 4, 'Roots & Tubers': 5, 'Vegetables & Fruit': 12, 'Meat & Poultry': 3,
-    Fish: 6, Seafood: 6, 'Pulses & Nuts': 3, 'Oils & Fats': 2, 'Sugar & Sweeteners': 2,
-  },
-  drought: {
-    Grains: 9, 'Roots & Tubers': 7, 'Vegetables & Fruit': 10, 'Meat & Poultry': 5,
-    Fish: 4, Seafood: 2, 'Pulses & Nuts': 6, 'Oils & Fats': 3, 'Sugar & Sweeteners': 4,
-  },
-}
+import { basketTotals, factorScale, scenarioRows } from '../predictMath'
 
 const UNITS = [
   ['day', 'predict.days', 'predict.day', 'DD'],
   ['month', 'predict.months', 'predict.month', 'MM'],
   ['year', 'predict.years', 'predict.year', 'YR'],
 ]
-
-const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v))
-
-
 
 function toDate(parts) {
   const d = new Date(parts.year, parts.month - 1, parts.day)
@@ -68,7 +51,7 @@ function PredictIcon({ size = 26 }) {
   )
 }
 
-export default function PredictPrices({ items = [], basket = null }) {
+export default function PredictPrices({ items = [] }) {
   const { t, commodityBy, horizon } = useApp()
   const now = new Date()
   const [open, setOpen] = useState(false)
@@ -83,39 +66,31 @@ export default function PredictPrices({ items = [], basket = null }) {
 
   const activeUnits = UNITS.filter(([key]) => units[key])
   const rangeWindow = useMemo(() => rangeFrom(range.start, range.end, units), [range, units])
-  const basketCurrent = basket?.current
 
   const computed = useMemo(() => {
     if (!rangeWindow || !items.length) return null
     const available = [...new Set([horizon, ...items.flatMap((i) => i.horizons_available || [])])].filter(Boolean)
     const h = horizonFor(rangeWindow.days, available)
-    const factorScale = clamp(rangeWindow.days / 30, 0.25, 1)
-    const rows = items.map((item) => {
-      const hz = item.horizons[String(h)]
-      if (!hz) return null
-      const c = commodityBy[item.commodity]
-      const impact = DISASTER_IMPACT(disaster, c?.group)
-      const scen = hz.price * (1 + impact * factorScale / 100)
-      return {
-        commodity: item.commodity,
-        name: c?.short || item.commodity,
-        icon: c?.icon || '🛒',
-        unit: c?.unit === 'dozen' ? t('common.perdz') : t('common.perkg'),
-        price: item.price,
-        base: hz.price,
-        scen,
-        change: hz.change_pct,
-        scenChange: (scen / item.price - 1) * 100,
-      }
-    }).filter(Boolean)
+    const rows = scenarioRows(items, {
+      horizon: h,
+      disaster,
+      scale: factorScale(rangeWindow.days),
+      lookup: (id) => commodityBy[id],
+    })
 
     if (!rows.length) return null
-    const weight = (row) => commodityBy[row.commodity]?.basket || 1
-    const totalWeight = rows.reduce((s, r) => s + weight(r), 0)
-    const scenBasket = rows.reduce((s, r) => s + weight(r) * r.scen, 0) / totalWeight
-    const currentBasket = basketCurrent ?? rows.reduce((s, r) => s + weight(r) * r.price, 0) / totalWeight
-    return { horizon: h, days: rangeWindow.days, rows, scenBasket, currentBasket, disaster }
-  }, [rangeWindow, items, horizon, disaster, commodityBy, basketCurrent, t])
+    const totals = basketTotals(rows)
+    const display = rows.map((row) => {
+      const c = commodityBy[row.commodity]
+      return {
+        ...row,
+        name: c?.short || row.commodity,
+        icon: c?.icon || '🛒',
+        unit: c?.unit === 'dozen' ? t('common.perdz') : t('common.perkg'),
+      }
+    })
+    return { horizon: h, days: rangeWindow.days, rows: display, ...totals, disaster }
+  }, [rangeWindow, items, horizon, disaster, commodityBy, t])
 
   // Choosing a disaster (or editing the range once one is chosen) re-runs the
   // scenario forecast; the result lands asynchronously so the UI can show a
@@ -255,8 +230,8 @@ export default function PredictPrices({ items = [], basket = null }) {
                   <div className="pp-basket">
                     <div>
                       <span className="pp-result-label">{t('predict.basket')}</span>
-                      <strong>{peso(result.scenBasket)}</strong>
-                      <small>{t('predict.now')} {peso(result.currentBasket)} · {pct((result.scenBasket / result.currentBasket - 1) * 100)}</small>
+                      <strong>{peso(result.scenSum)}</strong>
+                      <small>{t('predict.now')} {peso(result.currentSum)} · {pct(result.changePct)}</small>
                     </div>
                     {result.disaster && (
                       <span className={`pp-scenario-tag ${result.disaster}`}>
@@ -297,11 +272,6 @@ export default function PredictPrices({ items = [], basket = null }) {
       )}
     </>
   )
-}
-
-function DISASTER_IMPACT(disaster, group) {
-  if (!disaster) return 0
-  return (IMPACT[disaster] && IMPACT[disaster][group]) || 0
 }
 
 export { PredictIcon }
