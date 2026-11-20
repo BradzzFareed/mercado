@@ -3,13 +3,15 @@ import { Sprout, TrendingUp, Handshake, Sun, Moon } from 'lucide-react'
 import { useApp } from '../state'
 
 export default function AuthShell({ children }) {
-  const { theme, setTheme } = useApp()
+  const app = useApp()
+  const theme = app?.theme
+  const setTheme = app?.setTheme
 
   const dark = theme
     ? theme === 'dark'
     : typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
 
-  const toggleTheme = () => setTheme(dark ? 'light' : 'dark')
+  const toggleTheme = () => setTheme?.(dark ? 'light' : 'dark')
 
   // Theme tokens matching Layout.jsx
   const bgApp = dark ? '#060e0a' : '#ecfdf5'
@@ -564,6 +566,7 @@ export default function AuthShell({ children }) {
               aria-checked={dark}
               className="auth-theme-toggle"
               onClick={toggleTheme}
+              disabled={typeof setTheme !== 'function'}
               aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
               title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
             >
