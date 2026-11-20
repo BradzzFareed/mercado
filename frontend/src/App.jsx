@@ -12,6 +12,7 @@ import Pipeline from './pages/Pipeline'
 import Auth from './pages/Auth'
 import ResetPassword from './pages/ResetPassword'
 import Layout from './components/Layout'
+import About from './components/About'
 
 // Dev-only escape hatch for design work without Supabase credentials.
 const DEV_BYPASS_AUTH = import.meta.env.VITE_DEV_BYPASS_AUTH === '1'
@@ -115,6 +116,7 @@ function AppRouter() {
     else if (route.page === 'profile') page = <Profile />
     else if (route.page === 'notifications') page = <Notifications key={route.arg || 'all'} />
     else if (route.page === 'pipeline') page = <Pipeline />
+    else if (route.page === 'about') page = <About />
     else page = <Board />
   }
 
