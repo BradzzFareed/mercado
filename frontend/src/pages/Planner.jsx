@@ -1,10 +1,9 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import { useApp, useApi } from '../state'
 import { PageHead, HorizonToggle, Training, ErrorBox } from '../components/Common'
-import { advise } from '../alerts'
-import { peso, peso0, pct, store, save } from '../util'
-
-const DEFAULT_QTY = { rice: 25, pork: 6, chicken: 8, eggs: 3, bangus: 5, tomato: 4, onion: 3, calamansi: 1, cabbage: 4, eggplant: 4 }
+import ThankYou from '../components/ThankYou'
+import { pct, peso, store, save } from '../util'
+import { CATEGORIES, DISHES, INGREDIENTS, UNIT_LABEL, defaultQty, dishCart, stepQty, unitPrice } from '../dishes'
 
 function usePersisted(key, init) {
   const [v, setV] = useState(() => store(key, init))
@@ -12,49 +11,47 @@ function usePersisted(key, init) {
   return [v, setV]
 }
 
+const fmtQty = (q) => String(Math.round(q * 100) / 100)
+
 export default function Planner() {
-  const { province, prov, horizon, t, meta, dataVersion } = useApp()
+  const { province, prov, horizon, t, dataVersion } = useApp()
   const { data, error, loading, reload } = useApi(`/api/v1/overview?province=${province}`, [dataVersion])
-  const [sell, setSell] = usePersisted('mercado.sell', {})
-  const [qty, setQty] = usePersisted('mercado.qty', DEFAULT_QTY)
-  const [target, setTarget] = usePersisted('mercado.target', 40)
-  const [servings, setServings] = usePersisted('mercado.servings', 60)
+  const [dishId, setDishId] = usePersisted('mercado.cart.dish', null)
+  const [cart, setCart] = usePersisted('mercado.cart.items', {})
+  const [target, setTarget] = usePersisted('mercado.cart.target', 0)
+  const [adding, setAdding] = useState(false)
+  const [search, setSearch] = useState('')
+  const [thanks, setThanks] = useState(false)
+  const rail = useRef(null)
 
   const byC = useMemo(() => (data ? Object.fromEntries(data.items.map((i) => [i.commodity, i])) : {}), [data])
   if (error) return <ErrorBox error={error} retry={reload} />
   if (loading || !data) return <Training />
   const key = String(horizon)
 
-  const dishes = meta.dishes.map((d) => {
-    const unitPrice = (it, when) => {
-      const row = byC[it.c]
-      if (!row) return null
-      return when === 'now' ? row.price : row.horizons[key]?.price
-    }
-    const cost = (when) => (d.items.some((it) => unitPrice(it, when) == null) ? null : d.other + d.items.reduce((s, it) => s + it.amt * unitPrice(it, when), 0))
-    const now = cost('now'), then = cost('then')
-    const price = sell[d.id] ?? d.price
-    const margin = (p, c) => (c == null ? null : ((p - c) / p) * 100)
-    return { ...d, now, then, price, mNow: margin(price, now), mThen: margin(price, then), hold: then == null ? null : then / (1 - target / 100) }
-  })
-  const dailyNow = dishes.every((d) => d.now != null) ? dishes.reduce((s, d) => s + d.now, 0) / dishes.length * servings : null
-  const dailyThen = dishes.every((d) => d.then != null) ? dishes.reduce((s, d) => s + d.then, 0) / dishes.length * servings : null
+  const dish = DISHES.find((d) => d.id === dishId) || null
 
-  const shop = meta.commodities.map((c) => {
-    const it = byC[c.id] ?? null, hz = it ? (it.horizons[key] ?? null) : null
-    const q = qty[c.id] ?? 0
-    const adv = hz ? advise(c, hz) : null
-    const now = it ? q * it.price : null, then = hz ? q * hz.price : null
-    // one purchase cycle: stock-up covers up to 2 weeks of stock; waiting avoids paying the higher price once
-    let saving = 0
-    if (hz && adv.code === 'stock') saving = q * Math.min(2, c.shelf / 7) * (hz.price - it.price)
-    if (hz && adv.code === 'wait') saving = q * (it.price - hz.price)
-    return { c, it, hz, q, adv, now, then, saving: Math.max(0, saving) }
+  // Picking a dish fills the cart with its recommended ingredients and sets the target count.
+  const pick = (d) => {
+    setDishId(d.id)
+    setCart(dishCart(d))
+    setTarget(d.items.length)
+  }
+  const swipe = (dir) => rail.current?.scrollBy({ left: dir * Math.max(240, rail.current.clientWidth * 0.8), behavior: 'smooth' })
+
+  const setQty = (id, q) => setCart((c) => ({ ...c, [id]: Math.max(0, q) }))
+  const remove = (id) => setCart((c) => Object.fromEntries(Object.entries(c).filter(([k]) => k !== id)))
+  const add = (id) => { setCart((c) => ({ ...c, [id]: defaultQty(INGREDIENTS[id].unit) })); setAdding(false); setSearch('') }
+
+  const lines = Object.entries(cart).filter(([id]) => INGREDIENTS[id]).map(([id, q]) => {
+    const ing = INGREDIENTS[id]
+    const u = unitPrice(id, byC)
+    const hz = byC[id]?.horizons?.[key]
+    return { id, q, ing, ...u, total: q * u.price, change: hz ? hz.change_pct : null }
   })
-  const shopComplete = shop.every((r) => r.hz)
-  const totalSave = shopComplete ? shop.reduce((s, r) => s + r.saving, 0) : null
-  const totNow = shop.reduce((s, r) => s + (r.now ?? 0), 0)
-  const totThen = shopComplete ? shop.reduce((s, r) => s + r.then, 0) : null
+  const total = lines.reduce((s, l) => s + l.total, 0)
+  const hasEst = lines.some((l) => !l.live)
+  const available = Object.keys(INGREDIENTS).filter((id) => !(id in cart) && INGREDIENTS[id].name.toLowerCase().includes(search.trim().toLowerCase()))
 
   return (
     <>
@@ -62,66 +59,101 @@ export default function Planner() {
 
       <section className="panel">
         <div className="panel-top">
-          <div><h2>{t('plan.menu')}</h2><p className="muted">{t('plan.menu.sub', { days: horizon })}</p></div>
-          <div className="controls">
-            <label className="field inline"><span>{t('plan.target')}</span><input type="number" min="5" max="80" value={target} onChange={(e) => setTarget(+e.target.value || 0)} /><em>%</em></label>
-            <label className="field inline"><span>Servings/day</span><input type="number" min="10" max="1000" value={servings} onChange={(e) => setServings(+e.target.value || 0)} /></label>
+          <div><h2>Choose your menu</h2><p className="muted">Swipe through the dishes and tap one. Your cart fills with the recommended ingredients.</p></div>
+          <div className="rail-nav">
+            <button className="cart-icon-btn" onClick={() => swipe(-1)} aria-label="Previous dishes">‹</button>
+            <button className="cart-icon-btn" onClick={() => swipe(1)} aria-label="Next dishes">›</button>
           </div>
         </div>
-        <div className="dishes">
-          {dishes.map((d) => {
-            const risk = d.mThen != null && d.mThen < target
-            return (
-              <article key={d.id} className={'dish' + (risk ? ' risk' : '')}>
-                <header><h3>{d.name}</h3>{d.mThen == null ? '—' : <span className={'chip ' + (risk ? 'surge' : 'dip')}>{risk ? '▲ ' + t('plan.risk') : '✓ ' + t('plan.ok')}</span>}</header>
-                <p className="dish-items">{d.items.map((i) => i.label).join(' · ')}</p>
-                <div className="dish-nums">
-                  <div><span>{t('plan.cost')} now</span><b>{d.now == null ? '—' : peso(d.now)}</b></div>
-                  <div><span>In {horizon}d</span><b>{d.then == null ? '—' : peso(d.then)}</b>{d.then != null && d.now != null && <em className={'chg ' + (d.then > d.now ? 'surge' : 'dip')}>{pct((d.then / d.now - 1) * 100)}</em>}</div>
-                </div>
-                <label className="field inline"><span>{t('plan.sell')} ₱</span>
-                  <input type="number" min="1" value={d.price} onChange={(e) => setSell({ ...sell, [d.id]: +e.target.value || 0 })} />
-                </label>
-                {d.mThen != null && <div className="margin-bar" aria-label={`Margin ${d.mThen.toFixed(0)} percent`}>
-                  <i style={{ width: Math.max(0, Math.min(100, d.mThen)) + '%' }} className={risk ? 'risk' : ''} />
-                  <u style={{ left: target + '%' }} title={t('plan.target')} />
-                </div>}
-                <p className="muted small">{t('plan.margin')}: {d.mNow == null ? '—' : `${d.mNow.toFixed(0)}%`} now → <b>{d.mThen == null ? '—' : `${d.mThen.toFixed(0)}%`}</b> in {horizon}d.
-                  {risk && <> {t('plan.hold', { m: target })}: <b>{peso0(Math.ceil(d.hold))}</b></>}</p>
-              </article>
-            )
-          })}
+        <div className="menu-rail" ref={rail} tabIndex={0} aria-label="Dishes">
+          {DISHES.map((d) => (
+            <button key={d.id} className={'menu-card' + (d.id === dishId ? ' on' : '')} aria-pressed={d.id === dishId} onClick={() => pick(d)}>
+              <span className="menu-emoji" aria-hidden="true">{d.icon}</span>
+              <b>{d.name}</b>
+              <small>{CATEGORIES[d.cat]}</small>
+              <em>{d.items.length} ingredients</em>
+            </button>
+          ))}
         </div>
-        <p className="muted small">Daily ingredient cost at {servings} servings a day: <b>{dailyNow == null ? '—' : peso0(dailyNow)}</b> now, <b>{dailyThen == null ? '—' : peso0(dailyThen)}</b> in {horizon} days{dailyThen != null && <> ({pct((dailyThen / dailyNow - 1) * 100)})</>}.</p>
       </section>
 
-      <section className="panel">
-        <h2>{t('plan.shop')}</h2>
-        <p className="muted">{t('plan.shop.sub')}</p>
-        <div className="table-wrap">
-          <table className="table shop">
-            <thead><tr><th>{t('plan.item')}</th><th className="num">{t('plan.qty')}</th><th className="num">{t('plan.week.now')}</th><th className="num">{t('plan.week.then', { days: horizon })}</th><th>{t('plan.advice')}</th></tr></thead>
-            <tbody>
-              {shop.map((r) => (
-                <tr key={r.c.id}>
-                  <td><span aria-hidden="true">{r.c.icon}</span> {r.c.short}</td>
-                  <td className="num"><input className="qty" type="number" min="0" step="0.5" value={r.q} aria-label={`${r.c.short} per week`}
-                    onChange={(e) => setQty({ ...qty, [r.c.id]: +e.target.value || 0 })} /> <small>{r.c.unit === 'dozen' ? 'dz' : 'kg'}</small></td>
-                  <td className="num">{r.now == null ? '—' : peso0(r.now)}</td>
-                  <td className="num">{r.hz ? <>{peso0(r.then)} <em className={'chg ' + r.hz.signal}>{pct(r.hz.change_pct)}</em></> : '—'}</td>
-                  <td>{r.adv ? <span className={'advice ' + r.adv.code}>{t('adv.' + r.adv.code)}</span> : '—'}</td>
-                </tr>
+      <div className="cart-grid">
+        <section className="panel cart-left">
+          <div className="panel-top">
+            <div><h2>Your cart</h2><p className="muted">{lines.length ? `${lines.length} item${lines.length > 1 ? 's' : ''} to buy` : 'Nothing here yet. Pick a menu or add ingredients.'}</p></div>
+            <button className="cart-btn" onClick={() => setAdding(true)}>+ Add ingredient</button>
+          </div>
+          {lines.length > 0 && (
+            <ul className="cart-items">
+              {lines.map((l) => (
+                <li key={l.id} className="cart-item">
+                  <span className="cart-emoji" aria-hidden="true">{l.ing.icon}</span>
+                  <div className="cart-name">
+                    <b>{l.ing.name}</b>
+                    <small>{peso(l.price)} / {UNIT_LABEL[l.ing.unit]}{!l.live && ' (est.)'}{l.change != null && <em className={'chg ' + (l.change > 0 ? 'surge' : l.change < 0 ? 'dip' : 'stable')}> {pct(l.change)} in {horizon}d</em>}</small>
+                  </div>
+                  <div className="stepper">
+                    <button onClick={() => setQty(l.id, stepQty(l.ing.unit, l.q, -1))} aria-label={`Less ${l.ing.name}`}>−</button>
+                    <input type="number" min="0" step="0.05" value={fmtQty(l.q)} aria-label={`${l.ing.name} quantity`} onChange={(e) => setQty(l.id, +e.target.value || 0)} />
+                    <button onClick={() => setQty(l.id, stepQty(l.ing.unit, l.q, 1))} aria-label={`More ${l.ing.name}`}>+</button>
+                  </div>
+                  <b className="cart-line">{peso(l.total)}</b>
+                  <button className="cart-del" onClick={() => remove(l.id)} aria-label={`Remove ${l.ing.name}`}>🗑</button>
+                </li>
               ))}
-            </tbody>
-            <tfoot><tr><td>Total</td><td /><td className="num">{peso0(totNow)}</td><td className="num">{totThen == null ? '—' : peso0(totThen)}</td><td /></tr></tfoot>
-          </table>
+            </ul>
+          )}
+        </section>
+
+        <aside className="panel cart-summary" aria-label="Summary of ingredients">
+          <h2>Summary of ingredients</h2>
+          <div className="sum-menu">
+            <span className="menu-emoji" aria-hidden="true">{dish ? dish.icon : '🍽️'}</span>
+            <div><small className="muted">Menu</small><b>{dish ? dish.name : 'No menu chosen yet'}</b></div>
+          </div>
+          <label className="field inline sum-target">
+            <span>Target no. of ingredients</span>
+            <input type="number" min="0" max="50" value={target} onChange={(e) => setTarget(Math.max(0, Math.round(+e.target.value || 0)))} />
+          </label>
+          <p className={'small ' + (lines.length === target ? 'sum-ok' : 'muted')}>
+            In cart: <b>{lines.length}</b> of {target}{lines.length < target && ` (${target - lines.length} more to go)`}{lines.length > target && ` (${lines.length - target} over)`}
+          </p>
+          <ul className="sum-list" tabIndex={0} aria-label="Ingredient prices">
+            {lines.length === 0 && <li className="muted small">No ingredients yet.</li>}
+            {lines.map((l) => (
+              <li key={l.id}><span>{l.ing.icon} {l.ing.name} <small>× {fmtQty(l.q)} {UNIT_LABEL[l.ing.unit]}</small></span><b>{peso(l.total)}</b></li>
+            ))}
+          </ul>
+          <div className="sum-total"><span>Total</span><b>{peso(total)}</b></div>
+          {hasEst && <p className="muted small">“est.” items have no live forecast price yet; their prices are estimates.</p>}
+          <button className="cart-btn wide" disabled={!lines.length} onClick={() => setThanks(true)}>Checkout</button>
+        </aside>
+      </div>
+
+      {adding && (
+        <div className="modal-back" onClick={() => { setAdding(false); setSearch('') }}>
+          <div className="modal" role="dialog" aria-modal="true" aria-label="Add ingredient" onClick={(e) => e.stopPropagation()}>
+            <div className="panel-top"><h2>Add ingredient</h2><button className="cart-icon-btn" onClick={() => { setAdding(false); setSearch('') }} aria-label="Close">✕</button></div>
+            <input className="modal-search" type="search" placeholder="Search ingredients" value={search} onChange={(e) => setSearch(e.target.value)} autoFocus />
+            <ul className="modal-list">
+              {available.length === 0 && <li className="muted small">Nothing left to add.</li>}
+              {available.map((id) => {
+                const ing = INGREDIENTS[id], u = unitPrice(id, byC)
+                return (
+                  <li key={id}>
+                    <button onClick={() => add(id)}>
+                      <span aria-hidden="true">{ing.icon}</span><b>{ing.name}</b>
+                      <small>{peso(u.price)} / {UNIT_LABEL[ing.unit]}{!u.live && ' (est.)'}</small>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         </div>
-        <div className="savings">
-          <span>{t('plan.save')}</span>
-          <b>{totalSave == null ? '—' : peso0(totalSave)}</b>
-          <small>per purchase cycle, estimated from the {horizon}-day forecast</small>
-        </div>
-      </section>
+      )}
+
+      {thanks && <ThankYou onClose={() => setThanks(false)} />}
     </>
   )
 }
